@@ -10,6 +10,16 @@ var AppConfig *Config
 
 type Config struct {
 	ServerConfig ServerConfig
+	DbConfig     DBConfig
+}
+
+type DBConfig struct {
+	DbHost     string `env:"DB_HOST,required"`
+	DbPort     string `env:"DB_PORT,required"`
+	DbUser     string `env:"DB_USER,required"`
+	DbPassword string `env:"DB_PASSWORD,required"`
+	DbName     string `env:"DB_NAME,required"`
+	DbSslMode  string `env:"DB_SSLMODE,required"`
 }
 
 type ServerConfig struct {
@@ -32,6 +42,12 @@ func LoadConfig() error {
 		log.Fatal("Error parsing config")
 	}
 	config.ServerConfig = *serverConfig
+
+	dbConfig := &DBConfig{}
+	if err := env.Parse(dbConfig); err != nil {
+		log.Fatal("Error parsing config")
+	}
+	config.DbConfig = *dbConfig
 
 	AppConfig = config
 
