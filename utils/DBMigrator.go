@@ -1,7 +1,10 @@
 package utils
 
-import "gorm.io/gorm"
+import (
+	"github.com/saleh-ghazimoradi/EcoBay/internal/service/service_models"
+	"gorm.io/gorm"
+)
 
 func DBMigrator(db *gorm.DB) error {
-	return db.AutoMigrate()
+	return db.AutoMigrate(&service_models.User{})
 }
