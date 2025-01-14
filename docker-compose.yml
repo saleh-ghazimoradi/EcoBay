@@ -1,0 +1,17 @@
+services:
+  db:
+    image: postgres:16.3
+    container_name: EcoBay
+    env_file:
+      - app.env
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    ports:
+      - "5449:5432"
+
+volumes:
+  db-data:
