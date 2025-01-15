@@ -11,6 +11,7 @@ var AppConfig *Config
 type Config struct {
 	ServerConfig ServerConfig
 	DbConfig     DBConfig
+	AppSecret    AppSecret
 }
 
 type DBConfig struct {
@@ -25,6 +26,10 @@ type DBConfig struct {
 type ServerConfig struct {
 	Port    string `env:"SERVER_PORT,required"`
 	Version string `env:"SERVER_VERSION,required"`
+}
+
+type AppSecret struct {
+	Secret string `env:"APP_SECRET"`
 }
 
 func LoadConfig() error {
