@@ -12,6 +12,7 @@ type Config struct {
 	ServerConfig ServerConfig
 	DbConfig     DBConfig
 	AppSecret    AppSecret
+	Necessities  Necessities
 }
 
 type DBConfig struct {
@@ -21,6 +22,10 @@ type DBConfig struct {
 	DbPassword string `env:"DB_PASSWORD,required"`
 	DbName     string `env:"DB_NAME,required"`
 	DbSslMode  string `env:"DB_SSLMODE,required"`
+}
+
+type Necessities struct {
+	RandomNumbers int `env:"RANDOM_NUMBERS"`
 }
 
 type ServerConfig struct {
@@ -53,6 +58,12 @@ func LoadConfig() error {
 		log.Fatal("Error parsing config")
 	}
 	config.DbConfig = *dbConfig
+
+	necessities := &Necessities{}
+	if err := env.Parse(necessities); err != nil {
+		log.Fatal("Error parsing config")
+	}
+	config.Necessities = *necessities
 
 	AppConfig = config
 
