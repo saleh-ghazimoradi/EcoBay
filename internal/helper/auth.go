@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt/v4"
+	"github.com/saleh-ghazimoradi/EcoBay/config"
 	"github.com/saleh-ghazimoradi/EcoBay/internal/service/service_models"
 	"golang.org/x/crypto/bcrypt"
 	"net/http"
@@ -109,6 +110,10 @@ func (a *Auth) Authorize(ctx *fiber.Ctx) error {
 			"reason":  err,
 		})
 	}
+}
+
+func (a *Auth) GenerateCode() (int, error) {
+	return RandomNumbersGenerator(config.AppConfig.Necessities.RandomNumbers)
 }
 
 func (a *Auth) GetCurrentUser(ctx *fiber.Ctx) (*service_models.User, error) {

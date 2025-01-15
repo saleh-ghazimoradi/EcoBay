@@ -3,17 +3,19 @@ package service
 import (
 	"context"
 	"errors"
+	"github.com/saleh-ghazimoradi/EcoBay/config"
 	"github.com/saleh-ghazimoradi/EcoBay/internal/dto"
 	"github.com/saleh-ghazimoradi/EcoBay/internal/helper"
 	"github.com/saleh-ghazimoradi/EcoBay/internal/repository"
 	"github.com/saleh-ghazimoradi/EcoBay/internal/service/service_models"
+	"time"
 )
 
 type UserService interface {
 	Signup(ctx context.Context, input dto.UserSignUp) (string, error)
 	findUserByEmail(ctx context.Context, email string) (*service_models.User, error)
 	Login(ctx context.Context, email, password string) (string, error)
-	GetVerificationCode(ctx context.Context, user *service_models.User) error
+	GetVerificationCode(ctx context.Context, user *service_models.User) (int, error)
 	VerifyCode(ctx context.Context, id uint, code int) error
 	CreateProfile(ctx context.Context, id uint, input any) error
 	GetProfile(ctx context.Context, id uint) (*service_models.User, error)
@@ -63,11 +65,58 @@ func (u *userService) Login(ctx context.Context, email, password string) (string
 	return u.authService.GenerateToken(user.ID, user.Email, user.UserType)
 }
 
-func (u *userService) GetVerificationCode(ctx context.Context, user *service_models.User) error {
-	return nil
+func (u *userService) GetVerificationCode(ctx context.Context, user *service_models.User) (int, error) {
+	if u.isVerifiedUser(ctx, user.ID) {
+		return 0, errors.New("user already verified")
+	}
+
+	code, err := u.authService.GenerateCode()
+	if err != nil {
+		return 0, err
+	}
+
+	us := &service_models.User{
+		Expiry: time.Now().Add(config.AppConfig.Necessities.CodeExpiry),
+		Code:   code,
+	}
+
+	_, err = u.userRepository.UpdateUser(ctx, user.ID, us)
+	if err != nil {
+		return 0, errors.New("unable to update verification code")
+	}
+
+	// send SMS
+
+	return code, nil
 }
 
 func (u *userService) VerifyCode(ctx context.Context, id uint, code int) error {
+	if u.isVerifiedUser(ctx, id) {
+		return errors.New("user already verified")
+	}
+
+	user, err := u.userRepository.FindUserByID(ctx, id)
+	if err != nil {
+		return errors.New("user does not exist with the provided id")
+	}
+
+	if user.Code != code {
+		return errors.New("verification code does not match")
+	}
+
+	if !time.Now().Before(user.Expiry) {
+		return errors.New("verification code has expired")
+	}
+
+	updateUser := &service_models.User{
+		Verified: true,
+	}
+
+	_, err = u.userRepository.UpdateUser(ctx, id, updateUser)
+	if err != nil {
+		return errors.New("unable to verify user")
+	}
+
 	return nil
 }
 
@@ -108,7 +157,8 @@ func (u *userService) GetOrderById(ctx context.Context, id uint, uId uint) (any,
 }
 
 func (u *userService) isVerifiedUser(ctx context.Context, id uint) bool {
-	return false
+	currentUser, err := u.userRepository.FindUserByID(ctx, id)
+	return err == nil && currentUser.Verified
 }
 
 func NewUserService(userRepository repository.UserRepository, authService helper.Auth) UserService {

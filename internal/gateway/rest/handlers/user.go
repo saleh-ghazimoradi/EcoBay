@@ -57,14 +57,49 @@ func (u *UserHandler) Login(ctx *fiber.Ctx) error {
 }
 
 func (u *UserHandler) Verify(ctx *fiber.Ctx) error {
+	user, err := u.authService.GetCurrentUser(ctx)
+	if err != nil {
+		return ctx.Status(fiber.StatusUnauthorized).JSON(&fiber.Map{
+			"message": "please provide a valid user",
+		})
+	}
+
+	var req dto.VerificationCodeInput
+	if err = ctx.BodyParser(&req); err != nil {
+		return ctx.Status(http.StatusBadRequest).JSON(fiber.Map{
+			"message": "please provide valid input",
+		})
+	}
+
+	if err = u.userService.VerifyCode(context.Background(), user.ID, req.Code); err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(&fiber.Map{
+			"message": err.Error(),
+		})
+	}
+
 	return ctx.Status(http.StatusOK).JSON(fiber.Map{
-		"message": "verify",
+		"message": "verified successfully",
 	})
 }
 
 func (u *UserHandler) GetVerificationCode(ctx *fiber.Ctx) error {
+	user, err := u.authService.GetCurrentUser(ctx)
+	if err != nil {
+		return ctx.Status(fiber.StatusInternalServerError).JSON(&fiber.Map{
+			"message": "please provide a valid user",
+		})
+	}
+
+	code, err := u.userService.GetVerificationCode(context.Background(), user)
+	if err != nil {
+		return ctx.Status(fiber.StatusInternalServerError).JSON(&fiber.Map{
+			"message": "unable to generate verification code",
+		})
+	}
+
 	return ctx.Status(http.StatusOK).JSON(fiber.Map{
 		"message": "verification code",
+		"data":    code,
 	})
 }
 
