@@ -4,6 +4,7 @@ import (
 	"github.com/caarlos0/env"
 	"github.com/joho/godotenv"
 	"log"
+	"time"
 )
 
 var AppConfig *Config
@@ -25,7 +26,8 @@ type DBConfig struct {
 }
 
 type Necessities struct {
-	RandomNumbers int `env:"RANDOM_NUMBERS"`
+	RandomNumbers int           `env:"RANDOM_NUMBERS"`
+	CodeExpiry    time.Duration `env:"CODE_EXPIRY"`
 }
 
 type ServerConfig struct {
