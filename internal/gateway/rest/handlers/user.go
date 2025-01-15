@@ -4,12 +4,14 @@ import (
 	"context"
 	"github.com/gofiber/fiber/v2"
 	"github.com/saleh-ghazimoradi/EcoBay/internal/dto"
+	"github.com/saleh-ghazimoradi/EcoBay/internal/helper"
 	"github.com/saleh-ghazimoradi/EcoBay/internal/service"
 	"net/http"
 )
 
 type UserHandler struct {
 	userService service.UserService
+	authService helper.Auth
 }
 
 func (u *UserHandler) Register(ctx *fiber.Ctx) error {
@@ -28,13 +30,29 @@ func (u *UserHandler) Register(ctx *fiber.Ctx) error {
 	}
 
 	return ctx.Status(http.StatusCreated).JSON(fiber.Map{
-		"message": token,
+		"message": "register",
+		"token":   token,
 	})
 }
 
 func (u *UserHandler) Login(ctx *fiber.Ctx) error {
+	loginInput := dto.UserLogin{}
+	if err := ctx.BodyParser(&loginInput); err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(&fiber.Map{
+			"message": "please provide a valid user",
+		})
+	}
+
+	token, err := u.userService.Login(context.Background(), loginInput.Email, loginInput.Password)
+	if err != nil {
+		return ctx.Status(fiber.StatusUnauthorized).JSON(&fiber.Map{
+			"message": "please provide correct user id or password",
+		})
+	}
+
 	return ctx.Status(http.StatusOK).JSON(fiber.Map{
 		"message": "login",
+		"token":   token,
 	})
 }
 
@@ -56,8 +74,16 @@ func (u *UserHandler) CreateProfile(ctx *fiber.Ctx) error {
 	})
 }
 func (u *UserHandler) GetProfile(ctx *fiber.Ctx) error {
+	user, err := u.authService.GetCurrentUser(ctx)
+	if err != nil {
+		return ctx.Status(fiber.StatusInternalServerError).JSON(&fiber.Map{
+			"message": "error getting current user",
+		})
+	}
+
 	return ctx.Status(http.StatusOK).JSON(fiber.Map{
-		"message": "verification code",
+		"message": "get profile",
+		"user":    user,
 	})
 }
 
