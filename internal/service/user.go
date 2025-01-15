@@ -2,10 +2,11 @@ package service
 
 import (
 	"context"
+	"errors"
 	"github.com/saleh-ghazimoradi/EcoBay/internal/dto"
+	"github.com/saleh-ghazimoradi/EcoBay/internal/helper"
 	"github.com/saleh-ghazimoradi/EcoBay/internal/repository"
 	"github.com/saleh-ghazimoradi/EcoBay/internal/service/service_models"
-	"log"
 )
 
 type UserService interface {
@@ -28,20 +29,38 @@ type UserService interface {
 
 type userService struct {
 	userRepository repository.UserRepository
+	authService    helper.Auth
 }
 
 func (u *userService) Signup(ctx context.Context, input dto.UserSignUp) (string, error) {
-	log.Println(input)
+	hashedPassword, err := u.authService.CreateHashedPassword(input.Password)
+	if err != nil {
+		return "", err
+	}
 
-	return "this is my token", nil
+	user, err := u.userRepository.CreateUser(ctx, &service_models.User{
+		Email:    input.Email,
+		Password: hashedPassword,
+		Phone:    input.Phone,
+	})
+
+	return u.authService.GenerateToken(user.ID, user.Email, user.UserType)
 }
 
 func (u *userService) findUserByEmail(ctx context.Context, email string) (*service_models.User, error) {
-	return nil, nil
+	return u.userRepository.FindUserByEmail(ctx, email)
 }
 
 func (u *userService) Login(ctx context.Context, email, password string) (string, error) {
-	return "", nil
+	user, err := u.userRepository.FindUserByEmail(ctx, email)
+	if err != nil {
+		return "", errors.New("user does not exist with the provided email id")
+	}
+	if err = u.authService.VerifyPassword(password, user.Password); err != nil {
+		return "", err
+	}
+
+	return u.authService.GenerateToken(user.ID, user.Email, user.UserType)
 }
 
 func (u *userService) GetVerificationCode(ctx context.Context, user *service_models.User) error {
@@ -92,8 +111,9 @@ func (u *userService) isVerifiedUser(ctx context.Context, id uint) bool {
 	return false
 }
 
-func NewUserService(userRepository repository.UserRepository) UserService {
+func NewUserService(userRepository repository.UserRepository, authService helper.Auth) UserService {
 	return &userService{
 		userRepository: userRepository,
+		authService:    authService,
 	}
 }
