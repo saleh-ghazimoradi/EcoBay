@@ -8,6 +8,7 @@ require (
 	github.com/andybalholm/brotli v1.1.0 // indirect
 	github.com/caarlos0/env v3.5.0+incompatible // indirect
 	github.com/gofiber/fiber/v2 v2.52.6 // indirect
+	github.com/golang-jwt/jwt/v4 v4.5.1 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
