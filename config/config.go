@@ -28,6 +28,10 @@ type DBConfig struct {
 type Necessities struct {
 	RandomNumbers int           `env:"RANDOM_NUMBERS"`
 	CodeExpiry    time.Duration `env:"CODE_EXPIRY"`
+	AccountSMSSid string        `env:"ACCOUNT_SMSSID"`
+	AuthToken     string        `env:"AUTH_TOKEN"`
+	SetTO         string        `env:"SET_TO"`
+	SetFROM       string        `env:"SET_FROM"`
 }
 
 type ServerConfig struct {

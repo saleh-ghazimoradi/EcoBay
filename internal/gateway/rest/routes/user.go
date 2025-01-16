@@ -7,13 +7,15 @@ import (
 	"github.com/saleh-ghazimoradi/EcoBay/internal/helper"
 	"github.com/saleh-ghazimoradi/EcoBay/internal/repository"
 	"github.com/saleh-ghazimoradi/EcoBay/internal/service"
+	"github.com/saleh-ghazimoradi/EcoBay/pkg/notification"
 	"gorm.io/gorm"
 )
 
 func UserRoutes(app *fiber.App, db *gorm.DB) {
 	userRepository := repository.NewUserRepository(db)
 	authService := helper.NewAuth(config.AppConfig.AppSecret.Secret)
-	userService := service.NewUserService(userRepository, authService)
+	notificationService := notification.NewNotificationsClient()
+	userService := service.NewUserService(userRepository, authService, notificationService)
 	userHandler := handlers.NewUserHandler(userService)
 
 	pubRoutes := app.Group("/users")

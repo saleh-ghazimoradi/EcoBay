@@ -90,7 +90,7 @@ func (u *UserHandler) GetVerificationCode(ctx *fiber.Ctx) error {
 		})
 	}
 
-	code, err := u.userService.GetVerificationCode(context.Background(), user)
+	err = u.userService.GetVerificationCode(context.Background(), user)
 	if err != nil {
 		return ctx.Status(fiber.StatusInternalServerError).JSON(&fiber.Map{
 			"message": "unable to generate verification code",
@@ -99,7 +99,6 @@ func (u *UserHandler) GetVerificationCode(ctx *fiber.Ctx) error {
 
 	return ctx.Status(http.StatusOK).JSON(fiber.Map{
 		"message": "verification code",
-		"data":    code,
 	})
 }
 

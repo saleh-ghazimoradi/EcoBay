@@ -3,11 +3,13 @@ package service
 import (
 	"context"
 	"errors"
+	"fmt"
 	"github.com/saleh-ghazimoradi/EcoBay/config"
 	"github.com/saleh-ghazimoradi/EcoBay/internal/dto"
 	"github.com/saleh-ghazimoradi/EcoBay/internal/helper"
 	"github.com/saleh-ghazimoradi/EcoBay/internal/repository"
 	"github.com/saleh-ghazimoradi/EcoBay/internal/service/service_models"
+	"github.com/saleh-ghazimoradi/EcoBay/pkg/notification"
 	"time"
 )
 
@@ -15,7 +17,7 @@ type UserService interface {
 	Signup(ctx context.Context, input dto.UserSignUp) (string, error)
 	findUserByEmail(ctx context.Context, email string) (*service_models.User, error)
 	Login(ctx context.Context, email, password string) (string, error)
-	GetVerificationCode(ctx context.Context, user *service_models.User) (int, error)
+	GetVerificationCode(ctx context.Context, user *service_models.User) error
 	VerifyCode(ctx context.Context, id uint, code int) error
 	CreateProfile(ctx context.Context, id uint, input any) error
 	GetProfile(ctx context.Context, id uint) (*service_models.User, error)
@@ -30,8 +32,9 @@ type UserService interface {
 }
 
 type userService struct {
-	userRepository repository.UserRepository
-	authService    helper.Auth
+	userRepository      repository.UserRepository
+	authService         helper.Auth
+	notificationService notification.NotificationsClient
 }
 
 func (u *userService) Signup(ctx context.Context, input dto.UserSignUp) (string, error) {
@@ -65,14 +68,14 @@ func (u *userService) Login(ctx context.Context, email, password string) (string
 	return u.authService.GenerateToken(user.ID, user.Email, user.UserType)
 }
 
-func (u *userService) GetVerificationCode(ctx context.Context, user *service_models.User) (int, error) {
+func (u *userService) GetVerificationCode(ctx context.Context, user *service_models.User) error {
 	if u.isVerifiedUser(ctx, user.ID) {
-		return 0, errors.New("user already verified")
+		return errors.New("user already verified")
 	}
 
 	code, err := u.authService.GenerateCode()
 	if err != nil {
-		return 0, err
+		return err
 	}
 
 	us := &service_models.User{
@@ -82,12 +85,17 @@ func (u *userService) GetVerificationCode(ctx context.Context, user *service_mod
 
 	_, err = u.userRepository.UpdateUser(ctx, user.ID, us)
 	if err != nil {
-		return 0, errors.New("unable to update verification code")
+		return errors.New("unable to update verification code")
 	}
 
-	// send SMS
+	us, _ = u.userRepository.FindUserByID(ctx, user.ID)
 
-	return code, nil
+	msg := fmt.Sprintf("Your verification code is: %v", code)
+	if err = u.notificationService.SendSMS(ctx, us.Phone, msg); err != nil {
+		return errors.New("error on sending SMS")
+	}
+
+	return nil
 }
 
 func (u *userService) VerifyCode(ctx context.Context, id uint, code int) error {
@@ -161,9 +169,10 @@ func (u *userService) isVerifiedUser(ctx context.Context, id uint) bool {
 	return err == nil && currentUser.Verified
 }
 
-func NewUserService(userRepository repository.UserRepository, authService helper.Auth) UserService {
+func NewUserService(userRepository repository.UserRepository, authService helper.Auth, notificationService notification.NotificationsClient) UserService {
 	return &userService{
-		userRepository: userRepository,
-		authService:    authService,
+		userRepository:      userRepository,
+		authService:         authService,
+		notificationService: notificationService,
 	}
 }
