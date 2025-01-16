@@ -17,30 +17,21 @@ type UserHandler struct {
 func (u *UserHandler) Register(ctx *fiber.Ctx) error {
 	user := dto.UserSignUp{}
 	if err := ctx.BodyParser(&user); err != nil {
-		return ctx.Status(fiber.StatusBadRequest).JSON(&fiber.Map{
-			"message": "please provide a valid user",
-		})
+		return badRequestError(ctx, "please provide a valid user")
 	}
 
 	token, err := u.userService.Signup(context.Background(), user)
 	if err != nil {
-		return ctx.Status(fiber.StatusInternalServerError).JSON(&fiber.Map{
-			"message": "error signing up",
-		})
-	}
+		return internalError(ctx, err)
 
-	return ctx.Status(http.StatusCreated).JSON(fiber.Map{
-		"message": "register",
-		"token":   token,
-	})
+	}
+	return successMessage(ctx, "register", token)
 }
 
 func (u *UserHandler) Login(ctx *fiber.Ctx) error {
 	loginInput := dto.UserLogin{}
 	if err := ctx.BodyParser(&loginInput); err != nil {
-		return ctx.Status(fiber.StatusBadRequest).JSON(&fiber.Map{
-			"message": "please provide a valid user",
-		})
+		return badRequestError(ctx, "please provide a valid user")
 	}
 
 	token, err := u.userService.Login(context.Background(), loginInput.Email, loginInput.Password)
@@ -50,10 +41,7 @@ func (u *UserHandler) Login(ctx *fiber.Ctx) error {
 		})
 	}
 
-	return ctx.Status(http.StatusOK).JSON(fiber.Map{
-		"message": "login",
-		"token":   token,
-	})
+	return successMessage(ctx, "register", token)
 }
 
 func (u *UserHandler) Verify(ctx *fiber.Ctx) error {
@@ -66,40 +54,28 @@ func (u *UserHandler) Verify(ctx *fiber.Ctx) error {
 
 	var req dto.VerificationCodeInput
 	if err = ctx.BodyParser(&req); err != nil {
-		return ctx.Status(http.StatusBadRequest).JSON(fiber.Map{
-			"message": "please provide valid input",
-		})
+		return badRequestError(ctx, "please provide a valid user")
 	}
 
 	if err = u.userService.VerifyCode(context.Background(), user.ID, req.Code); err != nil {
-		return ctx.Status(fiber.StatusBadRequest).JSON(&fiber.Map{
-			"message": err.Error(),
-		})
+		return badRequestError(ctx, err.Error())
 	}
 
-	return ctx.Status(http.StatusOK).JSON(fiber.Map{
-		"message": "verified successfully",
-	})
+	return successMessage(ctx, "verified successfully", nil)
 }
 
 func (u *UserHandler) GetVerificationCode(ctx *fiber.Ctx) error {
 	user, err := u.authService.GetCurrentUser(ctx)
 	if err != nil {
-		return ctx.Status(fiber.StatusInternalServerError).JSON(&fiber.Map{
-			"message": "please provide a valid user",
-		})
+		return internalError(ctx, err)
 	}
 
 	err = u.userService.GetVerificationCode(context.Background(), user)
 	if err != nil {
-		return ctx.Status(fiber.StatusInternalServerError).JSON(&fiber.Map{
-			"message": "unable to generate verification code",
-		})
+		return internalError(ctx, err)
 	}
 
-	return ctx.Status(http.StatusOK).JSON(fiber.Map{
-		"message": "verification code",
-	})
+	return successMessage(ctx, "verification code", nil)
 }
 
 func (u *UserHandler) CreateProfile(ctx *fiber.Ctx) error {
@@ -110,15 +86,10 @@ func (u *UserHandler) CreateProfile(ctx *fiber.Ctx) error {
 func (u *UserHandler) GetProfile(ctx *fiber.Ctx) error {
 	user, err := u.authService.GetCurrentUser(ctx)
 	if err != nil {
-		return ctx.Status(fiber.StatusInternalServerError).JSON(&fiber.Map{
-			"message": "error getting current user",
-		})
+		return internalError(ctx, err)
 	}
 
-	return ctx.Status(http.StatusOK).JSON(fiber.Map{
-		"message": "get profile",
-		"user":    user,
-	})
+	return successMessage(ctx, "get profile", user)
 }
 
 func (u *UserHandler) AddToCart(ctx *fiber.Ctx) error {
@@ -154,29 +125,20 @@ func (u *UserHandler) GetOrder(ctx *fiber.Ctx) error {
 func (u *UserHandler) BecomeSeller(ctx *fiber.Ctx) error {
 	user, err := u.authService.GetCurrentUser(ctx)
 	if err != nil {
-		return ctx.Status(fiber.StatusInternalServerError).JSON(&fiber.Map{
-			"message": "please provide a valid user",
-		})
+		return internalError(ctx, err)
 	}
 
 	req := dto.SellerInput{}
 	if err = ctx.BodyParser(&req); err != nil {
-		return ctx.Status(http.StatusBadRequest).JSON(&fiber.Map{
-			"message": "please provide a valid input",
-		})
+		return badRequestError(ctx, "please provide a valid user")
 	}
 
 	token, err := u.userService.BecomeSeller(context.Background(), user.ID, req)
 	if err != nil {
-		return ctx.Status(fiber.StatusInternalServerError).JSON(&fiber.Map{
-			"message": "error on becoming seller",
-		})
+		return internalError(ctx, err)
 	}
 
-	return ctx.Status(http.StatusOK).JSON(fiber.Map{
-		"message": "become seller",
-		"token":   token,
-	})
+	return successMessage(ctx, "become seller", token)
 }
 
 func NewUserHandler(userService service.UserService) *UserHandler {
