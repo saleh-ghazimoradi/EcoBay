@@ -2,6 +2,11 @@ package service_models
 
 import "time"
 
+const (
+	SELLER = "seller"
+	BUYER  = "buyer"
+)
+
 type User struct {
 	ID        uint      `json:"id" gorm:"primary_key"`
 	FirstName string    `json:"first_name"`

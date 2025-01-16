@@ -152,8 +152,30 @@ func (u *UserHandler) GetOrder(ctx *fiber.Ctx) error {
 }
 
 func (u *UserHandler) BecomeSeller(ctx *fiber.Ctx) error {
+	user, err := u.authService.GetCurrentUser(ctx)
+	if err != nil {
+		return ctx.Status(fiber.StatusInternalServerError).JSON(&fiber.Map{
+			"message": "please provide a valid user",
+		})
+	}
+
+	req := dto.SellerInput{}
+	if err = ctx.BodyParser(&req); err != nil {
+		return ctx.Status(http.StatusBadRequest).JSON(&fiber.Map{
+			"message": "please provide a valid input",
+		})
+	}
+
+	token, err := u.userService.BecomeSeller(context.Background(), user.ID, req)
+	if err != nil {
+		return ctx.Status(fiber.StatusInternalServerError).JSON(&fiber.Map{
+			"message": "error on becoming seller",
+		})
+	}
+
 	return ctx.Status(http.StatusOK).JSON(fiber.Map{
-		"message": "verification code",
+		"message": "become seller",
+		"token":   token,
 	})
 }
 
