@@ -1,6 +1,7 @@
 package slg
 
 import (
+	"io"
 	"log/slog"
 	"os"
 	"strings"
@@ -9,6 +10,10 @@ import (
 var Logger = initLogger()
 
 func initLogger() *slog.Logger {
+	if os.Getenv("TEST_ENV") == "1" {
+		return slog.New(slog.NewJSONHandler(io.Discard, &slog.HandlerOptions{}))
+	}
+
 	level := slog.LevelInfo
 
 	if lvlStr, ok := os.LookupEnv("LOG_LEVEL"); ok {

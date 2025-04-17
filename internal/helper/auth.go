@@ -12,11 +12,20 @@ import (
 	"time"
 )
 
-type Auth struct {
-	Secret string
+type Authentication interface {
+	CreateHashedPassword(password string) (string, error)
+	GenerateToken(id uint, email, role string) (string, error)
+	VerifyPassword(plainPassword, hashedPassword string) error
+	VerifyToken(token string) (*domain.User, error)
+	Authorize(ctx *fiber.Ctx) error
+	GetCurrentUser(ctx *fiber.Ctx) *domain.User
 }
 
-func (a *Auth) CreateHashedPassword(password string) (string, error) {
+type authentication struct {
+	secret string
+}
+
+func (a *authentication) CreateHashedPassword(password string) (string, error) {
 	if len(password) < 6 {
 		return "", errors.New("password must be at least 6 characters")
 	}
@@ -30,7 +39,7 @@ func (a *Auth) CreateHashedPassword(password string) (string, error) {
 	return string(hashP), nil
 }
 
-func (a *Auth) GenerateToken(id uint, email string, role string) (string, error) {
+func (a *authentication) GenerateToken(id uint, email string, role string) (string, error) {
 	if id == 0 || email == "" || role == "" {
 		return "", errors.New("id and email and role are required")
 	}
@@ -42,7 +51,7 @@ func (a *Auth) GenerateToken(id uint, email string, role string) (string, error)
 		"exp":     time.Now().Add(time.Hour * 24 * 30).Unix(),
 	})
 
-	tokenStr, err := token.SignedString([]byte(a.Secret))
+	tokenStr, err := token.SignedString([]byte(a.secret))
 	if err != nil {
 		return "", errors.New("unable to sign token")
 	}
@@ -50,7 +59,7 @@ func (a *Auth) GenerateToken(id uint, email string, role string) (string, error)
 	return tokenStr, nil
 }
 
-func (a *Auth) VerifyPassword(plainPassword, hashedPassword string) error {
+func (a *authentication) VerifyPassword(plainPassword, hashedPassword string) error {
 	if len(plainPassword) < 6 {
 		return errors.New("password must be at least 6 characters")
 	}
@@ -60,7 +69,7 @@ func (a *Auth) VerifyPassword(plainPassword, hashedPassword string) error {
 	return nil
 }
 
-func (a *Auth) VerifyToken(token string) (*domain.User, error) {
+func (a *authentication) VerifyToken(token string) (*domain.User, error) {
 	tokenArr := strings.Split(token, " ")
 	if len(tokenArr) != 2 {
 		return nil, errors.New("invalid token")
@@ -76,7 +85,7 @@ func (a *Auth) VerifyToken(token string) (*domain.User, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 		}
-		return []byte(a.Secret), nil
+		return []byte(a.secret), nil
 	})
 
 	if err != nil {
@@ -97,7 +106,7 @@ func (a *Auth) VerifyToken(token string) (*domain.User, error) {
 	return nil, errors.New("token verification failed")
 }
 
-func (a *Auth) Authorize(ctx *fiber.Ctx) error {
+func (a *authentication) Authorize(ctx *fiber.Ctx) error {
 	header := ctx.Get("Authorization")
 	user, err := a.VerifyToken(header)
 	if err == nil && user.ID > 0 {
@@ -111,13 +120,13 @@ func (a *Auth) Authorize(ctx *fiber.Ctx) error {
 	}
 }
 
-func (a *Auth) GetCurrentUser(ctx *fiber.Ctx) *domain.User {
+func (a *authentication) GetCurrentUser(ctx *fiber.Ctx) *domain.User {
 	user := ctx.Locals("user")
 	return user.(*domain.User)
 }
 
-func NewAuth(secret string) Auth {
-	return Auth{
-		Secret: secret,
+func NewAuth(secret string) Authentication {
+	return &authentication{
+		secret: secret,
 	}
 }

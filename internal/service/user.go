@@ -18,7 +18,7 @@ type UserService interface {
 
 type userService struct {
 	userRepository repository.UserRepository
-	auth           helper.Auth
+	authentication helper.Authentication
 }
 
 func (u *userService) FindUserByEmail(ctx context.Context, email string) (*domain.User, error) {
@@ -31,7 +31,14 @@ func (u *userService) SignUp(ctx context.Context, input *dto.UserSignup) (string
 		return "", errors.New("email, password, and phone cannot be empty")
 	}
 
-	hashedPassword, err := u.auth.CreateHashedPassword(input.Password)
+	if _, err := u.FindUserByEmail(ctx, input.Email); err == nil {
+		slg.Logger.Error("email already exists", "email", input.Email)
+		return "", errors.New("email already exists")
+	} else if !errors.Is(err, repository.ErrNotFound) {
+		return "", err
+	}
+
+	hashedPassword, err := u.authentication.CreateHashedPassword(input.Password)
 	if err != nil {
 		return "", err
 	}
@@ -41,8 +48,11 @@ func (u *userService) SignUp(ctx context.Context, input *dto.UserSignup) (string
 		Password: hashedPassword,
 		Phone:    input.Phone,
 	})
+	if err != nil {
+		return "", err
+	}
 
-	return u.auth.GenerateToken(user.ID, user.Email, user.UserType)
+	return u.authentication.GenerateToken(user.ID, user.Email, user.UserType)
 }
 
 func (u *userService) Login(ctx context.Context, input *dto.UserLogin) (string, error) {
@@ -51,16 +61,16 @@ func (u *userService) Login(ctx context.Context, input *dto.UserLogin) (string, 
 		return "", errors.New("user not found")
 	}
 
-	if err = u.auth.VerifyPassword(input.Password, user.Password); err != nil {
+	if err = u.authentication.VerifyPassword(input.Password, user.Password); err != nil {
 		return "", err
 	}
 
-	return u.auth.GenerateToken(user.ID, user.Email, user.UserType)
+	return u.authentication.GenerateToken(user.ID, user.Email, user.UserType)
 }
 
-func NewUserService(userRepository repository.UserRepository, auth helper.Auth) UserService {
+func NewUserService(userRepository repository.UserRepository, authentication helper.Authentication) UserService {
 	return &userService{
 		userRepository: userRepository,
-		auth:           auth,
+		authentication: authentication,
 	}
 }

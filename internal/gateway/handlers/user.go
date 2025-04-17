@@ -5,12 +5,11 @@ import (
 	"github.com/saleh-ghazimoradi/EcoBay/internal/dto"
 	"github.com/saleh-ghazimoradi/EcoBay/internal/helper"
 	"github.com/saleh-ghazimoradi/EcoBay/internal/service"
-	"log"
 )
 
 type UserHandler struct {
-	userService service.UserService
-	auth        helper.Auth
+	userService    service.UserService
+	authentication helper.Authentication
 }
 
 func (u *UserHandler) Register(ctx *fiber.Ctx) error {
@@ -29,7 +28,12 @@ func (u *UserHandler) Register(ctx *fiber.Ctx) error {
 
 	token, err := u.userService.SignUp(ctx.UserContext(), &user)
 	if err != nil {
-		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+		if err.Error() == "email already exists" {
+			return ctx.Status(fiber.StatusBadRequest).JSON(&fiber.Map{
+				"message": "email already exists",
+			})
+		}
+		return ctx.Status(fiber.StatusInternalServerError).JSON(&fiber.Map{
 			"message": "error signing up",
 		})
 	}
@@ -50,8 +54,13 @@ func (u *UserHandler) Login(ctx *fiber.Ctx) error {
 
 	token, err := u.userService.Login(ctx.UserContext(), &payload)
 	if err != nil {
-		return ctx.Status(fiber.StatusUnauthorized).JSON(&fiber.Map{
-			"message": "please provide valid input",
+		if err.Error() == "user not found" || err.Error() == "password does not match" {
+			return ctx.Status(fiber.StatusUnauthorized).JSON(&fiber.Map{
+				"message": err.Error(),
+			})
+		}
+		return ctx.Status(fiber.StatusInternalServerError).JSON(&fiber.Map{
+			"message": "error logging in",
 		})
 	}
 
@@ -62,19 +71,16 @@ func (u *UserHandler) Login(ctx *fiber.Ctx) error {
 }
 
 func (u *UserHandler) GetProfile(ctx *fiber.Ctx) error {
-	user := u.auth.GetCurrentUser(ctx)
-
-	log.Println(user)
-
+	user := u.authentication.GetCurrentUser(ctx)
 	return ctx.Status(fiber.StatusOK).JSON(&fiber.Map{
 		"message": "get profile",
 		"user":    user,
 	})
 }
 
-func NewUserHandler(userService service.UserService, auth helper.Auth) *UserHandler {
+func NewUserHandler(userService service.UserService, authentication helper.Authentication) *UserHandler {
 	return &UserHandler{
-		userService: userService,
-		auth:        auth,
+		userService:    userService,
+		authentication: authentication,
 	}
 }
