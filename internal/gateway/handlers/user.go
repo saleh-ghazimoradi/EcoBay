@@ -3,11 +3,14 @@ package handlers
 import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/saleh-ghazimoradi/EcoBay/internal/dto"
+	"github.com/saleh-ghazimoradi/EcoBay/internal/helper"
 	"github.com/saleh-ghazimoradi/EcoBay/internal/service"
+	"log"
 )
 
 type UserHandler struct {
 	userService service.UserService
+	auth        helper.Auth
 }
 
 func (u *UserHandler) Register(ctx *fiber.Ctx) error {
@@ -37,8 +40,41 @@ func (u *UserHandler) Register(ctx *fiber.Ctx) error {
 	})
 }
 
-func NewUserHandler(userService service.UserService) *UserHandler {
+func (u *UserHandler) Login(ctx *fiber.Ctx) error {
+	payload := dto.UserLogin{}
+	if err := ctx.BodyParser(&payload); err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(&fiber.Map{
+			"message": "please provide valid input",
+		})
+	}
+
+	token, err := u.userService.Login(ctx.UserContext(), &payload)
+	if err != nil {
+		return ctx.Status(fiber.StatusUnauthorized).JSON(&fiber.Map{
+			"message": "please provide valid input",
+		})
+	}
+
+	return ctx.Status(fiber.StatusOK).JSON(&fiber.Map{
+		"token":   token,
+		"message": "successfully logged in",
+	})
+}
+
+func (u *UserHandler) GetProfile(ctx *fiber.Ctx) error {
+	user := u.auth.GetCurrentUser(ctx)
+
+	log.Println(user)
+
+	return ctx.Status(fiber.StatusOK).JSON(&fiber.Map{
+		"message": "get profile",
+		"user":    user,
+	})
+}
+
+func NewUserHandler(userService service.UserService, auth helper.Auth) *UserHandler {
 	return &UserHandler{
 		userService: userService,
+		auth:        auth,
 	}
 }
