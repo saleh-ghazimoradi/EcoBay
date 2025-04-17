@@ -1,7 +1,10 @@
 package utils
 
-import "gorm.io/gorm"
+import (
+	"github.com/saleh-ghazimoradi/EcoBay/internal/domain"
+	"gorm.io/gorm"
+)
 
 func DBMigrator(db *gorm.DB) error {
-	return db.AutoMigrate()
+	return db.AutoMigrate(&domain.User{})
 }
