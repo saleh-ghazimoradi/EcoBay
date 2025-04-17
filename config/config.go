@@ -9,8 +9,25 @@ import (
 var AppConfig *Config
 
 type Config struct {
-	Server   Server
-	Database Database
+	Server             Server
+	Database           Database
+	AuthConfig         AuthConfig
+	JWTConfig          JWTConfig
+	CtxConfig          CtxConfig
+	NotificationConfig NotificationConfig
+	Order              Order
+	Stripe             Stripe
+}
+
+type Stripe struct {
+	Secret         string `env:"STRIPE_SECRET"`
+	SuccessUrl     string `env:"SUCCESS_URL"`
+	CancelUrl      string `env:"CANCEL_URL"`
+	PublishableKey string `env:"PUBLISHABLE_KEY"`
+}
+
+type Order struct {
+	Code int `env:"SERVER_ORDER_CODE"`
 }
 
 type Server struct {
@@ -36,6 +53,27 @@ type Database struct {
 	MaxLifetime      time.Duration `env:"DB_MAX_LIFETIME"`
 	MaxIdleTime      time.Duration `env:"DB_MAX_IDLE_TIME"`
 	Timeout          time.Duration `env:"DB_TIMEOUT"`
+}
+
+type CtxConfig struct {
+	Timeout time.Duration `env:"CTX_TIMEOUT"`
+}
+
+type AuthConfig struct {
+	Secret     string        `env:"SECRET"`
+	Code       int           `env:"CODE"`
+	CodeExpiry time.Duration `env:"CODE_EXPIRY"`
+}
+
+type JWTConfig struct {
+	TokenExp time.Duration `env:"TOKEN_EXP"`
+}
+
+type NotificationConfig struct {
+	AccountSMSId string `env:"ACCOUNT_SMS_ID"`
+	AuthToken    string `env:"AUTH_TOKEN"`
+	SetTo        string `env:"SET_TO"`
+	SetFrom      string `env:"SET_FROM"`
 }
 
 func LoadConfig() error {
