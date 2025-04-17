@@ -24,7 +24,7 @@ func (u *UserHandler) Register(ctx *fiber.Ctx) error {
 		})
 	}
 
-	token, err := u.userService.SignUp(&user)
+	token, err := u.userService.SignUp(ctx.UserContext(), &user)
 	if err != nil {
 		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": "error signing up",

@@ -2,37 +2,40 @@ package handlers
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"net/http/httptest"
 	"testing"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/saleh-ghazimoradi/EcoBay/internal/domain"
 	"github.com/saleh-ghazimoradi/EcoBay/internal/dto"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
 
+// MockUserService is a mock implementation of the UserService interface
 type MockUserService struct {
 	mock.Mock
 }
 
-func (m *MockUserService) FindUserByEmail(email string) (*struct{}, error) {
-	args := m.Called(email)
-	return args.Get(0).(*struct{}), args.Error(1)
+func (m *MockUserService) SignUp(ctx context.Context, input *dto.UserSignup) (string, error) {
+	args := m.Called(ctx, input)
+	return args.String(0), args.Error(1)
 }
 
-func (m *MockUserService) SignUp(input *dto.UserSignup) (string, error) {
-	args := m.Called(input)
-	return args.String(0), args.Error(1)
+func (m *MockUserService) FindUserByEmail(ctx context.Context, email string) (*domain.User, error) {
+	args := m.Called(ctx, email)
+	return args.Get(0).(*domain.User), args.Error(1)
 }
 
 func TestUserHandler_Register(t *testing.T) {
 	tests := []struct {
 		name           string
-		body           interface{}
+		body           any
 		mockSetup      func(*MockUserService)
 		expectedStatus int
-		expectedBody   map[string]interface{}
+		expectedBody   map[string]any
 	}{
 		{
 			name: "successful registration",
@@ -44,11 +47,12 @@ func TestUserHandler_Register(t *testing.T) {
 				Phone: "1234567890",
 			},
 			mockSetup: func(m *MockUserService) {
-				m.On("SignUp", mock.AnythingOfType("*dto.UserSignup")).Return("mocked-token", nil)
+				m.On("SignUp", mock.MatchedBy(func(ctx context.Context) bool { return true }), mock.AnythingOfType("*dto.UserSignup")).
+					Return("1,test@example.com,buyer", nil)
 			},
 			expectedStatus: fiber.StatusCreated,
-			expectedBody: map[string]interface{}{
-				"token":   "mocked-token",
+			expectedBody: map[string]any{
+				"token":   "1,test@example.com,buyer",
 				"message": "successfully signed up",
 			},
 		},
@@ -58,7 +62,7 @@ func TestUserHandler_Register(t *testing.T) {
 			mockSetup: func(m *MockUserService) {
 			},
 			expectedStatus: fiber.StatusBadRequest,
-			expectedBody: map[string]interface{}{
+			expectedBody: map[string]any{
 				"message": "please provide valid input",
 			},
 		},
@@ -74,7 +78,7 @@ func TestUserHandler_Register(t *testing.T) {
 			mockSetup: func(m *MockUserService) {
 			},
 			expectedStatus: fiber.StatusBadRequest,
-			expectedBody: map[string]interface{}{
+			expectedBody: map[string]any{
 				"message": "email, password, and phone are required",
 			},
 		},
@@ -88,10 +92,11 @@ func TestUserHandler_Register(t *testing.T) {
 				Phone: "1234567890",
 			},
 			mockSetup: func(m *MockUserService) {
-				m.On("SignUp", mock.AnythingOfType("*dto.UserSignup")).Return("", assert.AnError)
+				m.On("SignUp", mock.MatchedBy(func(ctx context.Context) bool { return true }), mock.AnythingOfType("*dto.UserSignup")).
+					Return("", assert.AnError)
 			},
 			expectedStatus: fiber.StatusInternalServerError,
-			expectedBody: map[string]interface{}{
+			expectedBody: map[string]any{
 				"message": "error signing up",
 			},
 		},
