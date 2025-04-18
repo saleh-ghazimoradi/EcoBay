@@ -63,14 +63,6 @@ func (u *userRepository) UpdateUser(ctx context.Context, id uint, user *domain.U
 		Where("id = ?", id).
 		Updates(user)
 
-	if result.Error != nil {
-		slg.Logger.Error("update user", "id", id, "error", result.Error)
-		if errors.Is(result.Error, context.Canceled) {
-			return nil, context.Canceled
-		}
-		return nil, ErrUpdate
-	}
-
 	if result.RowsAffected == 0 {
 		slg.Logger.Warn("user not found for update", "id", id)
 		return nil, ErrNotFound
