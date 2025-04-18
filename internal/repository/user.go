@@ -3,9 +3,12 @@ package repository
 import (
 	"context"
 	"errors"
+	"github.com/saleh-ghazimoradi/EcoBay/internal/customErr"
 	"github.com/saleh-ghazimoradi/EcoBay/internal/domain"
 	"github.com/saleh-ghazimoradi/EcoBay/slg"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
+	"strings"
 )
 
 type UserRepository interface {
@@ -23,7 +26,10 @@ type userRepository struct {
 func (u *userRepository) CreateUser(ctx context.Context, user *domain.User) (*domain.User, error) {
 	if err := u.dbWrite.WithContext(ctx).Create(&user).Error; err != nil {
 		slg.Logger.Error("create user", "error", err)
-		return nil, ErrsCreate
+		if strings.Contains(err.Error(), "duplicate key value violates unique constraint") {
+			return nil, customErr.ErrEmailExists
+		}
+		return nil, err
 	}
 	return user, nil
 }
@@ -34,7 +40,7 @@ func (u *userRepository) FindUserByEmail(ctx context.Context, email string) (*do
 		slg.Logger.Error("find user by email", "error", err)
 		switch {
 		case errors.Is(err, gorm.ErrRecordNotFound):
-			return nil, ErrNotFound
+			return nil, customErr.ErrNotFound
 		default:
 			return nil, err
 		}
@@ -49,7 +55,7 @@ func (u *userRepository) FindUserById(ctx context.Context, id uint) (*domain.Use
 		slg.Logger.Error("find user by id", "error", err)
 		switch {
 		case errors.Is(err, gorm.ErrRecordNotFound):
-			return nil, ErrNotFound
+			return nil, customErr.ErrNotFound
 		default:
 			return nil, err
 		}
@@ -58,22 +64,11 @@ func (u *userRepository) FindUserById(ctx context.Context, id uint) (*domain.Use
 }
 
 func (u *userRepository) UpdateUser(ctx context.Context, id uint, user *domain.User) (*domain.User, error) {
-	result := u.dbWrite.WithContext(ctx).
-		Model(&domain.User{}).
-		Where("id = ?", id).
-		Updates(user)
-
-	if result.RowsAffected == 0 {
-		slg.Logger.Warn("user not found for update", "id", id)
-		return nil, ErrNotFound
+	if err := u.dbWrite.WithContext(ctx).Model(&user).Clauses(clause.Returning{}).Where("id = ?", id).Updates(user).Error; err != nil {
+		slg.Logger.Error("update user", "error", err)
+		return nil, customErr.ErrUpdate
 	}
-
-	var updatedUser domain.User
-	if err := u.dbRead.WithContext(ctx).First(&updatedUser, id).Error; err != nil {
-		slg.Logger.Error("failed to fetch updated user", "id", id, "error", err)
-		return nil, ErrUpdate
-	}
-	return &updatedUser, nil
+	return user, nil
 }
 
 func NewUserRepository(dbWrite, dbRead *gorm.DB) UserRepository {

@@ -16,24 +16,26 @@ type UserHandler struct {
 }
 
 func (u *UserHandler) Register(ctx *fiber.Ctx) error {
-	user := dto.UserSignup{}
-	if err := ctx.BodyParser(&user); err != nil {
+	payload := dto.UserSignup{}
+	if err := ctx.BodyParser(&payload); err != nil {
 		return badRequestResponse(ctx, customErr.ErrInvalidInput)
 	}
 
-	if err := validate.Validator.Struct(user); err != nil {
+	if err := validate.Validator.Struct(payload); err != nil {
 		return badRequestResponse(ctx, customErr.ErrValidate)
 	}
 
-	token, err := u.userService.SignUp(ctx.UserContext(), &user)
+	token, err := u.userService.SignUp(ctx.Context(), &payload)
 	if err != nil {
-		if errors.Is(err, customErr.ErrEmailExists) {
-			return badRequestResponse(ctx, customErr.ErrEmailExists)
+		switch {
+		case errors.Is(err, customErr.ErrEmailExists):
+			return errorResponse(ctx, fiber.StatusConflict, "a user with this email already exists")
+		default:
+			return serverErrorResponse(ctx, err)
 		}
-		return serverErrorResponse(ctx, err)
 	}
 
-	return successResponse(ctx, fiber.StatusCreated, "successfully signed up", token)
+	return successResponse(ctx, fiber.StatusCreated, "signed up successfully", token)
 }
 
 func (u *UserHandler) Login(ctx *fiber.Ctx) error {
@@ -43,25 +45,27 @@ func (u *UserHandler) Login(ctx *fiber.Ctx) error {
 	}
 
 	if err := validate.Validator.Struct(payload); err != nil {
-		return badRequestResponse(ctx, customErr.ErrInvalidInput)
+		return badRequestResponse(ctx, customErr.ErrValidate)
 	}
 
-	token, err := u.userService.Login(ctx.UserContext(), &payload)
+	token, err := u.userService.Login(ctx.Context(), &payload)
 	if err != nil {
-		if errors.Is(err, customErr.ErrNotFound) || errors.Is(err, customErr.ErrInvalidPassword) {
-			return badRequestResponse(ctx, customErr.ErrInvalidInput)
+		switch {
+		case errors.Is(err, customErr.ErrUserNotFound):
+			return notFoundResponse(ctx)
+		case errors.Is(err, customErr.ErrInvalidPassword):
+			return invalidCredentialsResponse(ctx)
+		default:
+			return serverErrorResponse(ctx, err)
 		}
-
-		return serverErrorResponse(ctx, err)
 	}
 
-	return successResponse(ctx, fiber.StatusCreated, "successfully logged in", token)
+	return successResponse(ctx, fiber.StatusCreated, "logged in successfully", token)
 }
 
 func (u *UserHandler) GetProfile(ctx *fiber.Ctx) error {
 	user := u.authentication.GetCurrentUser(ctx)
-
-	return successResponse(ctx, fiber.StatusOK, "successfully retrieved user", user)
+	return successResponse(ctx, fiber.StatusOK, "user profile", user)
 }
 
 func NewUserHandler(userService service.UserService, authentication helper.Authentication) *UserHandler {
