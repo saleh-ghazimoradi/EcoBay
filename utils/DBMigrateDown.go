@@ -6,7 +6,7 @@ import (
 )
 
 func DBMigrateDrop(db *gorm.DB) error {
-	err := db.Migrator().DropTable(&domain.User{})
+	err := db.Migrator().DropTable(&domain.User{}, &domain.BankAccount{})
 	if err != nil {
 		return err
 	}

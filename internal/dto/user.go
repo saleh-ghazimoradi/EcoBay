@@ -13,3 +13,12 @@ type UserSignup struct {
 type VerificationCode struct {
 	Code string `json:"code" validate:"required,len=6"`
 }
+
+type BecomeSellerInput struct {
+	FirstName         string `json:"first_name" validate:"required,min=1,max=255"`
+	LastName          string `json:"last_name" validate:"required,min=1,max=255"`
+	PhoneNumber       string `json:"phone_number" validate:"required"`
+	BankAccountNumber uint   `json:"bank_account_number" validate:"required"`
+	SwiftCode         string `json:"swift_code" validate:"required"`
+	PaymentType       string `json:"payment_type" validate:"required"`
+}

@@ -20,6 +20,7 @@ type UserService interface {
 	Login(ctx context.Context, input *dto.UserLogin) (string, error)
 	GetVerificationCode(ctx context.Context, input *domain.User) error
 	VerifyCode(ctx context.Context, id uint, code string) error
+	BecomeSeller(ctx context.Context, id uint, input *dto.BecomeSellerInput) (string, error)
 }
 
 type userService struct {
@@ -140,6 +141,44 @@ func (u *userService) VerifyCode(ctx context.Context, id uint, code string) erro
 	}
 
 	return nil
+}
+
+func (u *userService) BecomeSeller(ctx context.Context, id uint, input *dto.BecomeSellerInput) (string, error) {
+	user, _ := u.findUserById(ctx, id)
+
+	if user.UserType == domain.Seller {
+		return "", errors.New("user is already seller")
+	}
+
+	seller, err := u.userRepository.UpdateUser(ctx, id, &domain.User{
+		FirstName: input.FirstName,
+		LastName:  input.LastName,
+		Phone:     input.PhoneNumber,
+		UserType:  domain.Seller,
+	})
+
+	if err != nil {
+		return "", err
+	}
+
+	token, err := u.authentication.GenerateToken(user.ID, user.Email, seller.UserType)
+	if err != nil {
+		return "", err
+	}
+
+	account := &domain.BankAccount{
+		BankAccount: input.BankAccountNumber,
+		SwiftCode:   input.SwiftCode,
+		PaymentType: input.PaymentType,
+		UserId:      id,
+	}
+
+	if err = u.userRepository.CreateBankAccount(ctx, account); err != nil {
+		slg.Logger.Error("failed to create bank account", "user_id", id, "error", err)
+		return "", errors.New("failed to create bank account")
+	}
+
+	return token, nil
 }
 
 func NewUserService(userRepository repository.UserRepository, authentication helper.Authentication, email notification.Email) UserService {

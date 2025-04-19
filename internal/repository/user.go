@@ -16,6 +16,7 @@ type UserRepository interface {
 	FindUserByEmail(ctx context.Context, email string) (*domain.User, error)
 	FindUserById(ctx context.Context, id uint) (*domain.User, error)
 	UpdateUser(ctx context.Context, id uint, user *domain.User) (*domain.User, error)
+	CreateBankAccount(ctx context.Context, bankAccount *domain.BankAccount) error
 }
 
 type userRepository struct {
@@ -69,6 +70,14 @@ func (u *userRepository) UpdateUser(ctx context.Context, id uint, user *domain.U
 		return nil, customErr.ErrUpdate
 	}
 	return user, nil
+}
+
+func (u *userRepository) CreateBankAccount(ctx context.Context, bankAccount *domain.BankAccount) error {
+	if err := u.dbWrite.WithContext(ctx).Create(&bankAccount).Error; err != nil {
+		slg.Logger.Error("create bank account", "error", err)
+		return err
+	}
+	return nil
 }
 
 func NewUserRepository(dbWrite, dbRead *gorm.DB) UserRepository {

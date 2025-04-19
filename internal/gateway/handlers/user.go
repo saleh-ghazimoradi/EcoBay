@@ -98,6 +98,28 @@ func (u *UserHandler) Verify(ctx *fiber.Ctx) error {
 	return successResponse(ctx, fiber.StatusOK, "user verified successfully", nil)
 }
 
+func (u *UserHandler) BecomeSeller(ctx *fiber.Ctx) error {
+	payload := dto.BecomeSellerInput{}
+	if err := ctx.BodyParser(&payload); err != nil {
+		return badRequestResponse(ctx, customErr.ErrInvalidInput)
+	}
+
+	if err := validate.Validator.Struct(payload); err != nil {
+		return badRequestResponse(ctx, customErr.ErrInvalidInput)
+	}
+
+	user := u.authentication.GetCurrentUser(ctx)
+
+	token, err := u.userService.BecomeSeller(ctx.Context(), user.ID, &payload)
+	if err != nil {
+		return ctx.Status(fiber.StatusUnauthorized).JSON(&fiber.Map{
+			"message": "failed to become seller",
+		})
+	}
+
+	return successResponse(ctx, fiber.StatusOK, "user successfully became seller", token)
+}
+
 func NewUserHandler(userService service.UserService, authentication helper.Authentication) *UserHandler {
 	return &UserHandler{
 		userService:    userService,
