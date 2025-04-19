@@ -9,6 +9,7 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/recover"
 	"github.com/saleh-ghazimoradi/EcoBay/config"
 	"github.com/saleh-ghazimoradi/EcoBay/internal/gateway/routes"
+	"github.com/saleh-ghazimoradi/EcoBay/internal/service"
 	"github.com/saleh-ghazimoradi/EcoBay/slg"
 	"github.com/saleh-ghazimoradi/EcoBay/utils"
 	"os"
@@ -82,6 +83,11 @@ func Server() error {
 	}()
 
 	<-quit
+
+	// Wait for background goroutines to complete
+	go func() {
+		service.WG.Wait()
+	}()
 
 	ctx, cancel := context.WithTimeout(context.Background(), config.AppConfig.Server.Timeout)
 	defer cancel()
