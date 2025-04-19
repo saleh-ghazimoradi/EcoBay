@@ -19,6 +19,7 @@ type Authentication interface {
 	VerifyPassword(plainPassword, hashedPassword string) error
 	VerifyToken(token string) (*domain.User, error)
 	Authorize(ctx *fiber.Ctx) error
+	AuthorizeSeller(ctx *fiber.Ctx) error
 	GetCurrentUser(ctx *fiber.Ctx) *domain.User
 	GenerateCode() (string, error)
 }
@@ -118,6 +119,26 @@ func (a *authentication) Authorize(ctx *fiber.Ctx) error {
 		return ctx.Status(fiber.StatusUnauthorized).JSON(&fiber.Map{
 			"message": "authorization failed",
 			"reason":  err,
+		})
+	}
+}
+
+func (a *authentication) AuthorizeSeller(ctx *fiber.Ctx) error {
+	header := ctx.Get("Authorization")
+	user, err := a.VerifyToken(header)
+
+	if err != nil {
+		return ctx.Status(fiber.StatusUnauthorized).JSON(&fiber.Map{
+			"message": "authorization failed",
+			"reason":  err,
+		})
+	} else if user.ID > 0 && user.UserType == domain.Seller {
+		ctx.Locals("user", user)
+		return ctx.Next()
+	} else {
+		return ctx.Status(fiber.StatusUnauthorized).JSON(&fiber.Map{
+			"message": "authorization failed",
+			"reason":  errors.New("please join the program to manage the products"),
 		})
 	}
 }
