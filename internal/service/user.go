@@ -3,25 +3,29 @@ package service
 import (
 	"context"
 	"errors"
+	"fmt"
 	"github.com/saleh-ghazimoradi/EcoBay/config"
 	"github.com/saleh-ghazimoradi/EcoBay/internal/customErr"
 	"github.com/saleh-ghazimoradi/EcoBay/internal/domain"
 	"github.com/saleh-ghazimoradi/EcoBay/internal/dto"
 	"github.com/saleh-ghazimoradi/EcoBay/internal/helper"
 	"github.com/saleh-ghazimoradi/EcoBay/internal/repository"
+	"github.com/saleh-ghazimoradi/EcoBay/pkg/notification"
+	"github.com/saleh-ghazimoradi/EcoBay/slg"
 	"time"
 )
 
 type UserService interface {
 	SignUp(ctx context.Context, input *dto.UserSignup) (string, error)
 	Login(ctx context.Context, input *dto.UserLogin) (string, error)
-	GetVerificationCode(ctx context.Context, input *domain.User) (string, error)
+	GetVerificationCode(ctx context.Context, input *domain.User) error
 	VerifyCode(ctx context.Context, id uint, code string) error
 }
 
 type userService struct {
 	userRepository repository.UserRepository
 	authentication helper.Authentication
+	email          notification.Email
 }
 
 func (u *userService) findUserByEmail(ctx context.Context, email string) (*domain.User, error) {
@@ -68,14 +72,14 @@ func (u *userService) isVerifiedUser(ctx context.Context, id uint) bool {
 	return err == nil && user.Verified
 }
 
-func (u *userService) GetVerificationCode(ctx context.Context, input *domain.User) (string, error) {
+func (u *userService) GetVerificationCode(ctx context.Context, input *domain.User) error {
 	if u.isVerifiedUser(ctx, input.ID) {
-		return "", errors.New("user is already verified")
+		return errors.New("user is already verified")
 	}
 
 	code, err := u.authentication.GenerateCode()
 	if err != nil {
-		return "", err
+		return err
 	}
 
 	user := &domain.User{
@@ -85,10 +89,27 @@ func (u *userService) GetVerificationCode(ctx context.Context, input *domain.Use
 
 	_, err = u.userRepository.UpdateUser(ctx, input.ID, user)
 	if err != nil {
-		return "", errors.New("unable to update verification code")
+		return errors.New("unable to update verification code")
 	}
 
-	return code, nil
+	user, _ = u.findUserById(ctx, input.ID)
+
+	msg := fmt.Sprintf("Your verification code is %s", code)
+	fmt.Println(msg)
+
+	background(func() {
+		data := map[string]any{
+			"code": code,
+			"id":   user.ID,
+		}
+
+		err = u.email.SendEmail(user.Email, "user_verification_code.tmpl", data)
+		if err != nil {
+			slg.Logger.Error(err.Error())
+		}
+	})
+
+	return nil
 }
 
 func (u *userService) VerifyCode(ctx context.Context, id uint, code string) error {
@@ -121,9 +142,10 @@ func (u *userService) VerifyCode(ctx context.Context, id uint, code string) erro
 	return nil
 }
 
-func NewUserService(userRepository repository.UserRepository, authentication helper.Authentication) UserService {
+func NewUserService(userRepository repository.UserRepository, authentication helper.Authentication, email notification.Email) UserService {
 	return &userService{
 		userRepository: userRepository,
 		authentication: authentication,
+		email:          email,
 	}
 }

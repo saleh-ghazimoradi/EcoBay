@@ -9,14 +9,14 @@ import (
 var AppConfig *Config
 
 type Config struct {
-	Server             Server
-	Database           Database
-	AuthConfig         AuthConfig
-	JWTConfig          JWTConfig
-	CtxConfig          CtxConfig
-	NotificationConfig NotificationConfig
-	Order              Order
-	Stripe             Stripe
+	Server     Server
+	Database   Database
+	AuthConfig AuthConfig
+	JWTConfig  JWTConfig
+	CtxConfig  CtxConfig
+	SMTP       SMTP
+	Order      Order
+	Stripe     Stripe
 }
 
 type Stripe struct {
@@ -69,11 +69,12 @@ type JWTConfig struct {
 	TokenExp time.Duration `env:"TOKEN_EXP"`
 }
 
-type NotificationConfig struct {
-	AccountSMSId string `env:"ACCOUNT_SMS_ID"`
-	AuthToken    string `env:"AUTH_TOKEN"`
-	SetTo        string `env:"SET_TO"`
-	SetFrom      string `env:"SET_FROM"`
+type SMTP struct {
+	Host     string `env:"SMTP_HOST"`
+	Port     int    `env:"SMTP_PORT"`
+	UserName string `env:"SMTP_USERNAME"`
+	Password string `env:"SMTP_PASSWORD"`
+	Sender   string `env:"SMTP_SENDER"`
 }
 
 func LoadConfig() error {

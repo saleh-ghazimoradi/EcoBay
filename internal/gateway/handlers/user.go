@@ -71,12 +71,12 @@ func (u *UserHandler) GetProfile(ctx *fiber.Ctx) error {
 func (u *UserHandler) GetVerificationCode(ctx *fiber.Ctx) error {
 	user := u.authentication.GetCurrentUser(ctx)
 
-	code, err := u.userService.GetVerificationCode(ctx.Context(), user)
+	err := u.userService.GetVerificationCode(ctx.Context(), user)
 	if err != nil {
 		return serverErrorResponse(ctx, err)
 	}
 
-	return successResponse(ctx, fiber.StatusOK, "user verification code", code)
+	return successResponse(ctx, fiber.StatusOK, "user verification code", nil)
 }
 
 func (u *UserHandler) Verify(ctx *fiber.Ctx) error {
