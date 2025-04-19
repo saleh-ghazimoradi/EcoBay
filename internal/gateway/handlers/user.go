@@ -68,6 +68,21 @@ func (u *UserHandler) GetProfile(ctx *fiber.Ctx) error {
 	return successResponse(ctx, fiber.StatusOK, "user profile", user)
 }
 
+func (u *UserHandler) GetVerificationCode(ctx *fiber.Ctx) error {
+	user := u.authentication.GetCurrentUser(ctx)
+
+	code, err := u.userService.GetVerificationCode(ctx.Context(), user)
+	if err != nil {
+		return serverErrorResponse(ctx, err)
+	}
+
+	return successResponse(ctx, fiber.StatusOK, "user verification code", code)
+}
+
+func (u *UserHandler) Verify(ctx *fiber.Ctx) error {
+	return nil
+}
+
 func NewUserHandler(userService service.UserService, authentication helper.Authentication) *UserHandler {
 	return &UserHandler{
 		userService:    userService,

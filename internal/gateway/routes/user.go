@@ -13,4 +13,6 @@ func userRoutes(v1 fiber.Router, handler *handlers.UserHandler, helper helper.Au
 
 	privateRoutes := publicRoutes.Group("/users", helper.Authorize)
 	privateRoutes.Get("/profile", handler.GetProfile)
+	privateRoutes.Get("/verify", handler.GetVerificationCode)
+	privateRoutes.Post("/verify", handler.Verify)
 }

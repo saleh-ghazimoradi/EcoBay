@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt/v4"
+	"github.com/saleh-ghazimoradi/EcoBay/config"
 	"github.com/saleh-ghazimoradi/EcoBay/internal/domain"
 	"github.com/saleh-ghazimoradi/EcoBay/slg"
 	"golang.org/x/crypto/bcrypt"
@@ -19,6 +20,7 @@ type Authentication interface {
 	VerifyToken(token string) (*domain.User, error)
 	Authorize(ctx *fiber.Ctx) error
 	GetCurrentUser(ctx *fiber.Ctx) *domain.User
+	GenerateCode() (string, error)
 }
 
 type authentication struct {
@@ -123,6 +125,10 @@ func (a *authentication) Authorize(ctx *fiber.Ctx) error {
 func (a *authentication) GetCurrentUser(ctx *fiber.Ctx) *domain.User {
 	user := ctx.Locals("user")
 	return user.(*domain.User)
+}
+
+func (a *authentication) GenerateCode() (string, error) {
+	return randomNumbers(config.AppConfig.AuthConfig.Code)
 }
 
 func NewAuth(secret string) Authentication {
