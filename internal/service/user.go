@@ -16,6 +16,7 @@ type UserService interface {
 	SignUp(ctx context.Context, input *dto.UserSignup) (string, error)
 	Login(ctx context.Context, input *dto.UserLogin) (string, error)
 	GetVerificationCode(ctx context.Context, input *domain.User) (string, error)
+	VerifyCode(ctx context.Context, id uint, code string) error
 }
 
 type userService struct {
@@ -88,6 +89,36 @@ func (u *userService) GetVerificationCode(ctx context.Context, input *domain.Use
 	}
 
 	return code, nil
+}
+
+func (u *userService) VerifyCode(ctx context.Context, id uint, code string) error {
+	if u.isVerifiedUser(ctx, id) {
+		return errors.New("user is already verified")
+	}
+
+	user, err := u.findUserById(ctx, id)
+	if err != nil {
+		return err
+	}
+
+	if user.Code != code {
+		return errors.New("invalid code")
+	}
+
+	if !time.Now().Before(user.Expiry) {
+		return errors.New("code expired")
+	}
+
+	updateUser := &domain.User{
+		Verified: true,
+	}
+
+	_, err = u.userRepository.UpdateUser(ctx, id, updateUser)
+	if err != nil {
+		return errors.New("unable to verify user")
+	}
+
+	return nil
 }
 
 func NewUserService(userRepository repository.UserRepository, authentication helper.Authentication) UserService {

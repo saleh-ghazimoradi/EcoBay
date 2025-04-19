@@ -9,3 +9,7 @@ type UserSignup struct {
 	UserLogin
 	Phone string `json:"phone" validate:"required"`
 }
+
+type VerificationCode struct {
+	Code string `json:"code" validate:"required,len=6"`
+}

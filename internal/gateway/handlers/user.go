@@ -80,7 +80,22 @@ func (u *UserHandler) GetVerificationCode(ctx *fiber.Ctx) error {
 }
 
 func (u *UserHandler) Verify(ctx *fiber.Ctx) error {
-	return nil
+	payload := dto.VerificationCode{}
+	if err := ctx.BodyParser(&payload); err != nil {
+		return badRequestResponse(ctx, customErr.ErrInvalidInput)
+	}
+
+	if err := validate.Validator.Struct(payload); err != nil {
+		return badRequestResponse(ctx, customErr.ErrValidateCode)
+	}
+
+	user := u.authentication.GetCurrentUser(ctx)
+
+	if err := u.userService.VerifyCode(ctx.Context(), user.ID, payload.Code); err != nil {
+		return badRequestResponse(ctx, err)
+	}
+
+	return successResponse(ctx, fiber.StatusOK, "user verified successfully", nil)
 }
 
 func NewUserHandler(userService service.UserService, authentication helper.Authentication) *UserHandler {

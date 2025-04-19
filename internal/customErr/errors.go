@@ -8,6 +8,7 @@ var (
 	ErrEmailExists     = errors.New("email already exists")
 	ErrInvalidInput    = errors.New("please provide a valid input")
 	ErrInvalidPassword = errors.New("password does not match")
+	ErrValidateCode    = errors.New("code must be 6 characters long")
 	ErrInternal        = errors.New("internal server error")
 	ErrUnauthorized    = errors.New("unauthorized")
 )
