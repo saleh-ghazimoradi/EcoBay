@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"github.com/gofiber/fiber/v2"
+	"github.com/saleh-ghazimoradi/EcoBay/internal/domain"
 	"github.com/saleh-ghazimoradi/EcoBay/internal/dto"
 	"github.com/saleh-ghazimoradi/EcoBay/internal/helper"
 	"github.com/saleh-ghazimoradi/EcoBay/internal/service"
@@ -74,27 +75,95 @@ func (c *CatalogHandler) DeleteCategory(ctx *fiber.Ctx) error {
 }
 
 func (c *CatalogHandler) CreateProducts(ctx *fiber.Ctx) error {
-	return nil
-}
+	payload := dto.Product{}
+	if err := ctx.BodyParser(&payload); err != nil {
+		return badRequestResponse(ctx, err)
+	}
 
-func (c *CatalogHandler) EditProduct(ctx *fiber.Ctx) error {
-	return nil
-}
+	user := c.auth.GetCurrentUser(ctx)
 
-func (c *CatalogHandler) DeleteProduct(ctx *fiber.Ctx) error {
-	return nil
+	if err := c.catalogService.CreateProduct(ctx.Context(), &payload, user); err != nil {
+		return serverErrorResponse(ctx, err)
+	}
+
+	return successResponse(ctx, fiber.StatusCreated, "product created successfully", nil)
 }
 
 func (c *CatalogHandler) GetProduct(ctx *fiber.Ctx) error {
-	return nil
+	id, _ := strconv.ParseUint(ctx.Params("id"), 10, 64)
+	uintId := uint(id)
+
+	product, err := c.catalogService.GetProductById(ctx.Context(), uintId)
+	if err != nil {
+		return notFoundResponse(ctx)
+	}
+
+	return successResponse(ctx, fiber.StatusOK, "product successfully retrieved", product)
 }
 
 func (c *CatalogHandler) GetProducts(ctx *fiber.Ctx) error {
-	return nil
+	products, err := c.catalogService.GetProducts(ctx.Context())
+	if err != nil {
+		return notFoundResponse(ctx)
+	}
+	return successResponse(ctx, fiber.StatusOK, "products successfully retrieved", products)
+}
+
+func (c *CatalogHandler) EditProduct(ctx *fiber.Ctx) error {
+	id, _ := strconv.ParseUint(ctx.Params("id"), 10, 64)
+	uintId := uint(id)
+
+	payload := dto.UpdateProduct{}
+
+	if err := ctx.BodyParser(&payload); err != nil {
+		return badRequestResponse(ctx, err)
+	}
+
+	user := c.auth.GetCurrentUser(ctx)
+
+	updatedProduct, err := c.catalogService.EditProduct(ctx.Context(), uintId, &payload, user)
+	if err != nil {
+		return serverErrorResponse(ctx, err)
+	}
+
+	return successResponse(ctx, fiber.StatusOK, "product successfully edited", updatedProduct)
+}
+
+func (c *CatalogHandler) DeleteProduct(ctx *fiber.Ctx) error {
+	id, _ := strconv.ParseUint(ctx.Params("id"), 10, 64)
+	uintId := uint(id)
+
+	user := c.auth.GetCurrentUser(ctx)
+
+	if err := c.catalogService.DeleteProduct(ctx.Context(), uintId, user); err != nil {
+		return serverErrorResponse(ctx, err)
+	}
+
+	return successResponse(ctx, fiber.StatusNoContent, "product successfully deleted", nil)
 }
 
 func (c *CatalogHandler) UpdateStock(ctx *fiber.Ctx) error {
-	return nil
+	id, _ := strconv.ParseUint(ctx.Params("id"), 10, 64)
+	uintId := uint(id)
+
+	payload := dto.UpdateStock{}
+	if err := ctx.BodyParser(&payload); err != nil {
+		return badRequestResponse(ctx, err)
+	}
+
+	user := c.auth.GetCurrentUser(ctx)
+	product := domain.Product{
+		ID:     uintId,
+		Stock:  uint(payload.Stock),
+		UserId: user.ID,
+	}
+
+	updatedProd, err := c.catalogService.UpdateStock(ctx.Context(), &product)
+	if err != nil {
+		return serverErrorResponse(ctx, err)
+	}
+
+	return successResponse(ctx, fiber.StatusOK, "stock successfully updated", updatedProd)
 }
 
 func NewCatalogHandler(catalogService service.CatalogService, auth helper.Authentication) *CatalogHandler {

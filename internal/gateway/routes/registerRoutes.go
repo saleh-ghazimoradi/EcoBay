@@ -24,7 +24,7 @@ func RegisterRoutes(app *fiber.App, db *gorm.DB) {
 
 	/*---------- Services ----------*/
 	userService := service.NewUserService(userRepository, authentication, email)
-	catalogService := service.NewCatalogService(catalogRepository, authentication)
+	catalogService := service.NewCatalogService(catalogRepository)
 
 	/*---------- Handlers ----------*/
 	healthCheck := handlers.NewHealthCheckHandler()

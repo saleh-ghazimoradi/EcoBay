@@ -53,6 +53,8 @@ type Database struct {
 	MaxLifetime      time.Duration `env:"DB_MAX_LIFETIME"`
 	MaxIdleTime      time.Duration `env:"DB_MAX_IDLE_TIME"`
 	Timeout          time.Duration `env:"DB_TIMEOUT"`
+	Limit            int           `env:"DB_LIMIT"`
+	Offset           int           `env:"DB_OFFSET"`
 }
 
 type CtxConfig struct {
