@@ -17,4 +17,5 @@ var (
 	ErrsCreate  = errors.New("failed to create")
 	ErrNotFound = errors.New("not found")
 	ErrUpdate   = errors.New("failed to update")
+	ErrDelete   = errors.New("failed to delete")
 )
