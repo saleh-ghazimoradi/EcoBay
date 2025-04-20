@@ -8,10 +8,10 @@ import (
 
 func catalogRoutes(v1 fiber.Router, handler *handlers.CatalogHandler, auth helper.Authentication) {
 	publicRoutes := v1.Group("/")
-	publicRoutes.Get("/products", nil)
-	publicRoutes.Get("/products/:id", nil)
-	publicRoutes.Get("/categories", nil)
-	publicRoutes.Get("/categories/:id", nil)
+	publicRoutes.Get("/products", handler.GetProducts)
+	publicRoutes.Get("/products/:id", handler.GetProduct)
+	publicRoutes.Get("/categories", handler.GetCategories)
+	publicRoutes.Get("/categories/:id", handler.GetCategoryById)
 
 	sellerRoutes := v1.Group("/seller", auth.AuthorizeSeller)
 	sellerRoutes.Post("/categories", handler.CreateCategories)
