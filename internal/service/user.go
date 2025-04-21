@@ -25,11 +25,11 @@ type UserService interface {
 	CreateCart(ctx context.Context, input *dto.Cart, user *domain.User) ([]*domain.Cart, error)
 	FindCart(ctx context.Context, id uint) ([]*domain.Cart, error)
 	CreateOrder(ctx context.Context, uId uint, orderRef string, pId string, amount float64) error
-	CreateProfile(ctx context.Context, id uint, input dto.Profile) error
+	CreateProfile(ctx context.Context, id uint, input *dto.Profile) error
 	GetOrderById(ctx context.Context, id, uId uint) (*domain.Order, error)
 	GetOrders(ctx context.Context, user *domain.User) ([]*domain.Order, error)
 	GetProfile(ctx context.Context, id uint) (*domain.User, error)
-	UpdateProfile(ctx context.Context, id uint, input dto.Profile) error
+	UpdateProfile(ctx context.Context, id uint, input *dto.Profile) error
 }
 
 type userService struct {
@@ -276,7 +276,71 @@ func (u *userService) CreateOrder(ctx context.Context, uId uint, orderRef string
 	return nil
 }
 
-func (u *userService) CreateProfile(ctx context.Context, id uint, input dto.Profile) error {
+func (u *userService) CreateProfile(ctx context.Context, id uint, input *dto.Profile) error {
+	user, err := u.findUserById(ctx, id)
+	if err != nil {
+		slg.Logger.Error("failed to find user", "id", id, "error", err)
+		return err
+	}
+
+	if input.FirstName != "" {
+		user.FirstName = input.FirstName
+	}
+
+	if input.LastName != "" {
+		user.LastName = input.LastName
+	}
+
+	_, err = u.userRepository.UpdateUser(ctx, id, user)
+
+	address := domain.Address{
+		AddressLine1: input.Address.AddressLine1,
+		AddressLine2: input.Address.AddressLine2,
+		City:         input.Address.City,
+		Country:      input.Address.Country,
+		PostCode:     input.Address.PostCode,
+		UserId:       id,
+	}
+
+	if err = u.userRepository.CreateProfile(ctx, &address); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (u *userService) UpdateProfile(ctx context.Context, id uint, input *dto.Profile) error {
+	user, err := u.findUserById(ctx, id)
+	if err != nil {
+		return err
+	}
+
+	if input.FirstName != "" {
+		user.FirstName = input.FirstName
+	}
+
+	if input.LastName != "" {
+		user.LastName = input.LastName
+	}
+
+	_, err = u.userRepository.UpdateUser(ctx, id, user)
+	if err != nil {
+		return err
+	}
+
+	address := domain.Address{
+		AddressLine1: input.Address.AddressLine1,
+		AddressLine2: input.Address.AddressLine2,
+		City:         input.Address.City,
+		Country:      input.Address.Country,
+		PostCode:     input.Address.PostCode,
+		UserId:       id,
+	}
+
+	if err = u.userRepository.UpdateProfile(ctx, &address); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -290,10 +354,6 @@ func (u *userService) GetOrders(ctx context.Context, user *domain.User) ([]*doma
 
 func (u *userService) GetProfile(ctx context.Context, id uint) (*domain.User, error) {
 	return nil, nil
-}
-
-func (u *userService) UpdateProfile(ctx context.Context, id uint, input dto.Profile) error {
-	return nil
 }
 
 func NewUserService(userRepository repository.UserRepository, catalogRepository repository.CatalogRepository, authentication helper.Authentication, email notification.Email) UserService {

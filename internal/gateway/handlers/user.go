@@ -63,9 +63,45 @@ func (u *UserHandler) Login(ctx *fiber.Ctx) error {
 	return successResponse(ctx, fiber.StatusCreated, "logged in successfully", token)
 }
 
+func (u *UserHandler) CreateProfile(ctx *fiber.Ctx) error {
+	payload := dto.Profile{}
+	if err := ctx.BodyParser(&payload); err != nil {
+		return badRequestResponse(ctx, customErr.ErrInvalidInput)
+	}
+
+	user := u.authentication.GetCurrentUser(ctx)
+
+	if err := u.userService.CreateProfile(ctx.Context(), user.ID, &payload); err != nil {
+		return serverErrorResponse(ctx, err)
+	}
+
+	return successResponse(ctx, fiber.StatusOK, "profile successfully created", nil)
+}
+
 func (u *UserHandler) GetProfile(ctx *fiber.Ctx) error {
 	user := u.authentication.GetCurrentUser(ctx)
-	return successResponse(ctx, fiber.StatusOK, "user profile", user)
+
+	profile, err := u.userService.GetProfile(ctx.Context(), user.ID)
+	if err != nil {
+		return notFoundResponse(ctx)
+	}
+
+	return successResponse(ctx, fiber.StatusOK, "profile successfully retrieved", profile)
+}
+
+func (u *UserHandler) UpdateProfile(ctx *fiber.Ctx) error {
+	payload := dto.Profile{}
+	if err := ctx.BodyParser(&payload); err != nil {
+		return badRequestResponse(ctx, customErr.ErrInvalidInput)
+	}
+
+	user := u.authentication.GetCurrentUser(ctx)
+
+	if err := u.userService.UpdateProfile(ctx.Context(), user.ID, &payload); err != nil {
+		return serverErrorResponse(ctx, err)
+	}
+
+	return successResponse(ctx, fiber.StatusOK, "profile updated successfully", nil)
 }
 
 func (u *UserHandler) GetVerificationCode(ctx *fiber.Ctx) error {

@@ -15,8 +15,9 @@ func userRoutes(v1 fiber.Router, handler *handlers.UserHandler, helper helper.Au
 	privateRoutes.Get("/verify", handler.GetVerificationCode)
 	privateRoutes.Post("/verify", handler.Verify)
 
-	//privateRoutes.Post("/profile", handler.CreateProfile)
+	privateRoutes.Post("/profile", handler.CreateProfile)
 	privateRoutes.Get("/profile", handler.GetProfile)
+	privateRoutes.Patch("/profile", handler.UpdateProfile)
 
 	privateRoutes.Post("/cart", handler.AddToCart)
 	privateRoutes.Get("/cart", handler.GetCart)

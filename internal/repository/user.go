@@ -48,7 +48,7 @@ func (u *userRepository) CreateUser(ctx context.Context, user *domain.User) (*do
 
 func (u *userRepository) FindUserByEmail(ctx context.Context, email string) (*domain.User, error) {
 	var user domain.User
-	if err := u.dbRead.WithContext(ctx).First(&user, "email = ?", email).Error; err != nil {
+	if err := u.dbRead.WithContext(ctx).Preload("Address").First(&user, "email = ?", email).Error; err != nil {
 		slg.Logger.Error("find user by email", "error", err)
 		switch {
 		case errors.Is(err, gorm.ErrRecordNotFound):
@@ -147,10 +147,18 @@ func (u *userRepository) FindOrderById(ctx context.Context, id, uId uint) (*doma
 }
 
 func (u *userRepository) CreateProfile(ctx context.Context, address *domain.Address) error {
+	if err := u.dbWrite.WithContext(ctx).Create(&address).Error; err != nil {
+		slg.Logger.Error("failed to create profile", "error", err.Error())
+		return customErr.ErrsCreate
+	}
 	return nil
 }
 
 func (u *userRepository) UpdateProfile(ctx context.Context, address *domain.Address) error {
+	if err := u.dbWrite.WithContext(ctx).Where("user_id=?", address.UserId).Updates(&address).Error; err != nil {
+		slg.Logger.Error("failed to update profile", "error", err.Error())
+		return customErr.ErrUpdate
+	}
 	return nil
 }
 
