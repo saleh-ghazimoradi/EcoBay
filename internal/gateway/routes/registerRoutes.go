@@ -19,17 +19,17 @@ func RegisterRoutes(app *fiber.App, db *gorm.DB) {
 	authentication := helper.NewAuth(config.AppConfig.AuthConfig.Secret)
 
 	/*---------- Repositories ----------*/
-	userRepository := repository.NewUserRepository(db, db)
 	catalogRepository := repository.NewCatalogRepository(db, db)
+	userRepository := repository.NewUserRepository(db, db)
 
 	/*---------- Services ----------*/
-	userService := service.NewUserService(userRepository, authentication, email)
 	catalogService := service.NewCatalogService(catalogRepository)
+	userService := service.NewUserService(userRepository, catalogRepository, authentication, email)
 
 	/*---------- Handlers ----------*/
 	healthCheck := handlers.NewHealthCheckHandler()
-	userHandler := handlers.NewUserHandler(userService, authentication)
 	catalogHandler := handlers.NewCatalogHandler(catalogService, authentication)
+	userHandler := handlers.NewUserHandler(userService, authentication)
 
 	healthCheckRoute(v1, healthCheck)
 	userRoutes(v1, userHandler, authentication)

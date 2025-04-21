@@ -12,6 +12,7 @@ import (
 	"github.com/saleh-ghazimoradi/EcoBay/internal/repository"
 	"github.com/saleh-ghazimoradi/EcoBay/pkg/notification"
 	"github.com/saleh-ghazimoradi/EcoBay/slg"
+	"gorm.io/gorm"
 	"time"
 )
 
@@ -21,12 +22,21 @@ type UserService interface {
 	GetVerificationCode(ctx context.Context, input *domain.User) error
 	VerifyCode(ctx context.Context, id uint, code string) error
 	BecomeSeller(ctx context.Context, id uint, input *dto.BecomeSellerInput) (string, error)
+	CreateCart(ctx context.Context, input *dto.Cart, user *domain.User) ([]*domain.Cart, error)
+	FindCart(ctx context.Context, id uint) ([]*domain.Cart, error)
+	CreateOrder(ctx context.Context, uId uint, orderRef string, pId string, amount float64) error
+	CreateProfile(ctx context.Context, id uint, input dto.Profile) error
+	GetOrderById(ctx context.Context, id, uId uint) (*domain.Order, error)
+	GetOrders(ctx context.Context, user *domain.User) ([]*domain.Order, error)
+	GetProfile(ctx context.Context, id uint) (*domain.User, error)
+	UpdateProfile(ctx context.Context, id uint, input dto.Profile) error
 }
 
 type userService struct {
-	userRepository repository.UserRepository
-	authentication helper.Authentication
-	email          notification.Email
+	userRepository    repository.UserRepository
+	catalogRepository repository.CatalogRepository
+	authentication    helper.Authentication
+	email             notification.Email
 }
 
 func (u *userService) findUserByEmail(ctx context.Context, email string) (*domain.User, error) {
@@ -181,10 +191,116 @@ func (u *userService) BecomeSeller(ctx context.Context, id uint, input *dto.Beco
 	return token, nil
 }
 
-func NewUserService(userRepository repository.UserRepository, authentication helper.Authentication, email notification.Email) UserService {
+func (u *userService) CreateCart(ctx context.Context, input *dto.Cart, user *domain.User) ([]*domain.Cart, error) {
+
+	if input.ProductId == 0 {
+		return nil, errors.New("invalid product id")
+	}
+	if input.Qty == 0 {
+		return nil, errors.New("quantity must be greater than zero")
+	}
+
+	cart, err := u.userRepository.FindCartItem(ctx, user.ID, input.ProductId)
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		slg.Logger.Error("error finding cart item", "user_id", user.ID, "product_id", input.ProductId, "err", err)
+		return nil, errors.New("error checking cart item")
+	}
+
+	if cart.ID > 0 {
+		// Cart item exists, update or delete
+		if input.Qty < 1 {
+			if err := u.userRepository.DeleteCartById(ctx, cart.ID); err != nil {
+				slg.Logger.Error("error deleting cart item", "cart_id", cart.ID, "err", err)
+				return nil, errors.New("error deleting cart item")
+			}
+		} else {
+			cart.Qty = input.Qty
+			if err := u.userRepository.UpdateCart(ctx, cart); err != nil {
+				slg.Logger.Error("error updating cart item", "cart_id", cart.ID, "err", err)
+				return nil, errors.New("error updating cart item")
+			}
+		}
+	} else {
+		// Cart item doesn't exist, create new
+		product, err := u.catalogRepository.FindProductById(ctx, input.ProductId)
+		if err != nil {
+			if errors.Is(err, customErr.ErrNotFound) {
+				slg.Logger.Error("product not found", "product_id", input.ProductId)
+				return nil, errors.New("product not found")
+			}
+			slg.Logger.Error("error retrieving product", "product_id", input.ProductId, "err", err)
+			return nil, errors.New("error retrieving product")
+		}
+
+		// Log product details for debugging
+		slg.Logger.Info("product found", "product_id", product.ID, "name", product.Name, "stock", product.Stock)
+
+		// Create new cart item
+		newCart := &domain.Cart{
+			ProductId: input.ProductId,
+			UserId:    user.ID,
+			Name:      product.Name,
+			ImageUrl:  product.ImageUrl,
+			Qty:       input.Qty,
+			Price:     product.Price,
+			SellerId:  product.UserId,
+		}
+
+		if err := u.userRepository.CreateCart(ctx, newCart); err != nil {
+			slg.Logger.Error("error creating cart item", "user_id", user.ID, "product_id", input.ProductId, "err", err)
+			return nil, fmt.Errorf("error creating cart: %w", err)
+		}
+	}
+
+	// Fetch updated cart items
+	cartItems, err := u.userRepository.FindCartItems(ctx, user.ID)
+	if err != nil {
+		slg.Logger.Error("error fetching cart items", "user_id", user.ID, "err", err)
+		return nil, errors.New("error retrieving cart items")
+	}
+
+	return cartItems, nil
+}
+
+func (u *userService) FindCart(ctx context.Context, id uint) ([]*domain.Cart, error) {
+	cartItems, err := u.userRepository.FindCartItems(ctx, id)
+	if err != nil {
+		slg.Logger.Error("error on finding cart items", "err", err)
+		return nil, err
+	}
+
+	return cartItems, nil
+}
+
+func (u *userService) CreateOrder(ctx context.Context, uId uint, orderRef string, pId string, amount float64) error {
+	return nil
+}
+
+func (u *userService) CreateProfile(ctx context.Context, id uint, input dto.Profile) error {
+	return nil
+}
+
+func (u *userService) GetOrderById(ctx context.Context, id, uId uint) (*domain.Order, error) {
+	return nil, nil
+}
+
+func (u *userService) GetOrders(ctx context.Context, user *domain.User) ([]*domain.Order, error) {
+	return nil, nil
+}
+
+func (u *userService) GetProfile(ctx context.Context, id uint) (*domain.User, error) {
+	return nil, nil
+}
+
+func (u *userService) UpdateProfile(ctx context.Context, id uint, input dto.Profile) error {
+	return nil
+}
+
+func NewUserService(userRepository repository.UserRepository, catalogRepository repository.CatalogRepository, authentication helper.Authentication, email notification.Email) UserService {
 	return &userService{
-		userRepository: userRepository,
-		authentication: authentication,
-		email:          email,
+		userRepository:    userRepository,
+		catalogRepository: catalogRepository,
+		authentication:    authentication,
+		email:             email,
 	}
 }

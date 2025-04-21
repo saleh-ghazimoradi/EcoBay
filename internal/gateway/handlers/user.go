@@ -120,6 +120,33 @@ func (u *UserHandler) BecomeSeller(ctx *fiber.Ctx) error {
 	return successResponse(ctx, fiber.StatusOK, "user successfully became seller", token)
 }
 
+func (u *UserHandler) AddToCart(ctx *fiber.Ctx) error {
+	var payload dto.Cart
+	if err := ctx.BodyParser(&payload); err != nil {
+		return badRequestResponse(ctx, customErr.ErrInvalidInput)
+	}
+
+	user := u.authentication.GetCurrentUser(ctx)
+
+	cartItems, err := u.userService.CreateCart(ctx.Context(), &payload, user)
+	if err != nil {
+		return serverErrorResponse(ctx, err)
+	}
+
+	return successResponse(ctx, fiber.StatusCreated, "successfully added to the cart", cartItems)
+}
+
+func (u *UserHandler) GetCart(ctx *fiber.Ctx) error {
+	user := u.authentication.GetCurrentUser(ctx)
+
+	cart, err := u.userService.FindCart(ctx.Context(), user.ID)
+	if err != nil {
+		return notFoundResponse(ctx)
+	}
+
+	return successResponse(ctx, fiber.StatusOK, "cart successfully retrieved", cart)
+}
+
 func NewUserHandler(userService service.UserService, authentication helper.Authentication) *UserHandler {
 	return &UserHandler{
 		userService:    userService,

@@ -11,6 +11,7 @@ func DBMigrateDrop(db *gorm.DB) error {
 		&domain.BankAccount{},
 		&domain.Category{},
 		&domain.Product{},
+		&domain.Cart{},
 	)
 	if err != nil {
 		return err

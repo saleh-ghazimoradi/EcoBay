@@ -11,5 +11,6 @@ func DBMigrator(db *gorm.DB) error {
 		&domain.BankAccount{},
 		&domain.Category{},
 		&domain.Product{},
+		&domain.Cart{},
 	)
 }

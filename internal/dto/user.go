@@ -22,3 +22,17 @@ type BecomeSellerInput struct {
 	SwiftCode         string `json:"swift_code" validate:"required"`
 	PaymentType       string `json:"payment_type" validate:"required"`
 }
+
+type Address struct {
+	AddressLine1 string `json:"address_line1" validate:"required,min=1,max=255"`
+	AddressLine2 string `json:"address_line2" validate:"required,min=1,max=255"`
+	City         string `json:"city" validate:"required,min=1,max=255"`
+	PostCode     uint   `json:"post_code" validate:"required"`
+	Country      string `json:"country" validate:"required"`
+}
+
+type Profile struct {
+	FirstName string  `json:"first_name" validate:"required,min=1,max=255"`
+	LastName  string  `json:"last_name" validate:"required,min=1,max=255"`
+	Address   Address `json:"address" validate:"required"`
+}
