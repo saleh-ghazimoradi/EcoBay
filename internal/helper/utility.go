@@ -2,7 +2,7 @@ package helper
 
 import "crypto/rand"
 
-func randomNumbers(length int) (string, error) {
+func RandomNumbers(length int) (string, error) {
 	const numbers = "1234567890"
 
 	buffer := make([]byte, length)

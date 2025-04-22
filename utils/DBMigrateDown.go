@@ -13,6 +13,8 @@ func DBMigrateDrop(db *gorm.DB) error {
 		&domain.Category{},
 		&domain.Product{},
 		&domain.Cart{},
+		&domain.Order{},
+		&domain.OrderItem{},
 	)
 	if err != nil {
 		return err

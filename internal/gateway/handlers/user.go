@@ -8,6 +8,7 @@ import (
 	"github.com/saleh-ghazimoradi/EcoBay/internal/helper"
 	"github.com/saleh-ghazimoradi/EcoBay/internal/service"
 	"github.com/saleh-ghazimoradi/EcoBay/internal/validate"
+	"strconv"
 )
 
 type UserHandler struct {
@@ -181,6 +182,42 @@ func (u *UserHandler) GetCart(ctx *fiber.Ctx) error {
 	}
 
 	return successResponse(ctx, fiber.StatusOK, "cart successfully retrieved", cart)
+}
+
+func (u *UserHandler) CreateOrders(ctx *fiber.Ctx) error {
+	user := u.authentication.GetCurrentUser(ctx)
+
+	orderRef, err := u.userService.CreateOrder(ctx.Context(), user)
+	if err != nil {
+		return serverErrorResponse(ctx, err)
+	}
+
+	return successResponse(ctx, fiber.StatusCreated, "orders successfully created", orderRef)
+}
+
+func (u *UserHandler) GetOrders(ctx *fiber.Ctx) error {
+	user := u.authentication.GetCurrentUser(ctx)
+
+	orders, err := u.userService.GetOrders(ctx.Context(), user)
+	if err != nil {
+		return notFoundResponse(ctx)
+	}
+
+	return successResponse(ctx, fiber.StatusOK, "orders successfully retrieved", orders)
+}
+
+func (u *UserHandler) GetOrder(ctx *fiber.Ctx) error {
+	id, _ := strconv.Atoi(ctx.Params("id"))
+	uIntId := uint(id)
+
+	user := u.authentication.GetCurrentUser(ctx)
+
+	order, err := u.userService.GetOrderById(ctx.Context(), uIntId, user.ID)
+	if err != nil {
+		return notFoundResponse(ctx)
+	}
+
+	return successResponse(ctx, fiber.StatusOK, "order successfully retrieved", order)
 }
 
 func NewUserHandler(userService service.UserService, authentication helper.Authentication) *UserHandler {

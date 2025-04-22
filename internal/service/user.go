@@ -24,7 +24,7 @@ type UserService interface {
 	BecomeSeller(ctx context.Context, id uint, input *dto.BecomeSellerInput) (string, error)
 	CreateCart(ctx context.Context, input *dto.Cart, user *domain.User) ([]*domain.Cart, error)
 	FindCart(ctx context.Context, id uint) ([]*domain.Cart, error)
-	CreateOrder(ctx context.Context, uId uint, orderRef string, pId string, amount float64) error
+	CreateOrder(ctx context.Context, user *domain.User) (string, error)
 	CreateProfile(ctx context.Context, id uint, input *dto.Profile) error
 	GetOrderById(ctx context.Context, id, uId uint) (*domain.Order, error)
 	GetOrders(ctx context.Context, user *domain.User) ([]*domain.Order, error)
@@ -272,8 +272,55 @@ func (u *userService) FindCart(ctx context.Context, id uint) ([]*domain.Cart, er
 	return cartItems, nil
 }
 
-func (u *userService) CreateOrder(ctx context.Context, uId uint, orderRef string, pId string, amount float64) error {
-	return nil
+func (u *userService) CreateOrder(ctx context.Context, user *domain.User) (string, error) {
+	cartItems, err := u.userRepository.FindCartItems(ctx, user.ID)
+	if err != nil {
+		return "", errors.New("error finding items")
+	}
+
+	if len(cartItems) == 0 {
+		return "", errors.New("cart is empty; cannot create order")
+	}
+
+	paymentId := "PAY12345"
+	txnId := "TXN12345"
+	orderRef, _ := helper.RandomNumbers(8)
+
+	var amount float64
+	var orderItems []domain.OrderItem
+
+	for _, item := range cartItems {
+		amount += item.Price * float64(item.Qty)
+		orderItems = append(orderItems, domain.OrderItem{
+			ProductId: item.ProductId,
+			Qty:       item.Qty,
+			Price:     item.Price,
+			Name:      item.Name,
+			ImageUrl:  item.ImageUrl,
+			SellerId:  item.UserId,
+		})
+	}
+
+	order := &domain.Order{
+		UserId:         user.ID,
+		PaymentId:      paymentId,
+		TransactionId:  txnId,
+		OrderRefNumber: orderRef,
+		Amount:         amount,
+		Items:          orderItems,
+	}
+
+	if err = u.userRepository.CreateOrder(ctx, order); err != nil {
+		return "", err
+	}
+
+	if err = u.userRepository.DeleteCartItems(ctx, user.ID); err != nil {
+		slg.Logger.Error("error deleting cart items", "user_id", user.ID, "err", err)
+		return "", errors.New("error deleting cart items")
+	}
+
+	return orderRef, nil
+
 }
 
 func (u *userService) CreateProfile(ctx context.Context, id uint, input *dto.Profile) error {
@@ -354,11 +401,20 @@ func (u *userService) UpdateProfile(ctx context.Context, id uint, input *dto.Pro
 }
 
 func (u *userService) GetOrderById(ctx context.Context, id, uId uint) (*domain.Order, error) {
-	return nil, nil
+	order, err := u.userRepository.FindOrderById(ctx, id, uId)
+	if err != nil {
+		return nil, err
+	}
+	return order, nil
 }
 
 func (u *userService) GetOrders(ctx context.Context, user *domain.User) ([]*domain.Order, error) {
-	return nil, nil
+	orders, err := u.userRepository.FindOrders(ctx, user.ID)
+	if err != nil {
+		slg.Logger.Error("error finding orders", "user_id", user.ID, "err", err)
+		return nil, err
+	}
+	return orders, nil
 }
 
 func NewUserService(userRepository repository.UserRepository, catalogRepository repository.CatalogRepository, authentication helper.Authentication, email notification.Email) UserService {

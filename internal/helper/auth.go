@@ -149,7 +149,7 @@ func (a *authentication) GetCurrentUser(ctx *fiber.Ctx) *domain.User {
 }
 
 func (a *authentication) GenerateCode() (string, error) {
-	return randomNumbers(config.AppConfig.AuthConfig.Code)
+	return RandomNumbers(config.AppConfig.AuthConfig.Code)
 }
 
 func NewAuth(secret string) Authentication {

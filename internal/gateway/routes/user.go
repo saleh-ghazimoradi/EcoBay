@@ -22,8 +22,9 @@ func userRoutes(v1 fiber.Router, handler *handlers.UserHandler, helper helper.Au
 	privateRoutes.Post("/cart", handler.AddToCart)
 	privateRoutes.Get("/cart", handler.GetCart)
 
-	//privateRoutes.Get("/order", handler.GetOrders)
-	//privateRoutes.Get("/order/:id", handler.GetOrder)
+	privateRoutes.Post("/orders", handler.CreateOrders)
+	privateRoutes.Get("/order", handler.GetOrders)
+	privateRoutes.Get("/order/:id", handler.GetOrder)
 
 	privateRoutes.Post("/become-seller", handler.BecomeSeller)
 }

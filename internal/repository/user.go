@@ -63,7 +63,7 @@ func (u *userRepository) FindUserByEmail(ctx context.Context, email string) (*do
 
 func (u *userRepository) FindUserById(ctx context.Context, id uint) (*domain.User, error) {
 	var user domain.User
-	if err := u.dbRead.WithContext(ctx).Preload("Address").First(&user, id).Error; err != nil {
+	if err := u.dbRead.WithContext(ctx).Preload("Address").Preload("Cart").Preload("Orders").First(&user, id).Error; err != nil {
 		slg.Logger.Error("find user by id", "error", err)
 		switch {
 		case errors.Is(err, gorm.ErrRecordNotFound):
@@ -135,15 +135,29 @@ func (u *userRepository) DeleteCartItems(ctx context.Context, uId uint) error {
 }
 
 func (u *userRepository) CreateOrder(ctx context.Context, order *domain.Order) error {
+	if err := u.dbWrite.WithContext(ctx).Create(order).Error; err != nil {
+		slg.Logger.Error("create order", "error", err)
+		return errors.New("failed to create order")
+	}
 	return nil
 }
 
 func (u *userRepository) FindOrders(ctx context.Context, uId uint) ([]*domain.Order, error) {
-	return nil, nil
+	var orders []*domain.Order
+	if err := u.dbRead.WithContext(ctx).Where("user_id = ?", uId).Find(&orders).Error; err != nil {
+		slg.Logger.Error("find orders", "error", err)
+		return nil, errors.New("failed to find orders")
+	}
+	return orders, nil
 }
 
 func (u *userRepository) FindOrderById(ctx context.Context, id, uId uint) (*domain.Order, error) {
-	return nil, nil
+	var order *domain.Order
+	if err := u.dbRead.WithContext(ctx).Preload("Items").Where("id=? AND user_id=?", id, uId).First(&order).Error; err != nil {
+		slg.Logger.Error("find order", "error", err)
+		return nil, errors.New("failed to find order")
+	}
+	return order, nil
 }
 
 func (u *userRepository) CreateProfile(ctx context.Context, address *domain.Address) error {
