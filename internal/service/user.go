@@ -309,6 +309,15 @@ func (u *userService) CreateProfile(ctx context.Context, id uint, input *dto.Pro
 	return nil
 }
 
+func (u *userService) GetProfile(ctx context.Context, id uint) (*domain.User, error) {
+	profile, err := u.findUserById(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+
+	return profile, nil
+}
+
 func (u *userService) UpdateProfile(ctx context.Context, id uint, input *dto.Profile) error {
 	user, err := u.findUserById(ctx, id)
 	if err != nil {
@@ -349,10 +358,6 @@ func (u *userService) GetOrderById(ctx context.Context, id, uId uint) (*domain.O
 }
 
 func (u *userService) GetOrders(ctx context.Context, user *domain.User) ([]*domain.Order, error) {
-	return nil, nil
-}
-
-func (u *userService) GetProfile(ctx context.Context, id uint) (*domain.User, error) {
 	return nil, nil
 }
 

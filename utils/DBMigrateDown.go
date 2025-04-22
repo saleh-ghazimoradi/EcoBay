@@ -8,6 +8,7 @@ import (
 func DBMigrateDrop(db *gorm.DB) error {
 	err := db.Migrator().DropTable(
 		&domain.User{},
+		&domain.Address{},
 		&domain.BankAccount{},
 		&domain.Category{},
 		&domain.Product{},

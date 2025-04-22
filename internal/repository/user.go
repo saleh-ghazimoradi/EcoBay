@@ -63,7 +63,7 @@ func (u *userRepository) FindUserByEmail(ctx context.Context, email string) (*do
 
 func (u *userRepository) FindUserById(ctx context.Context, id uint) (*domain.User, error) {
 	var user domain.User
-	if err := u.dbRead.WithContext(ctx).First(&user, id).Error; err != nil {
+	if err := u.dbRead.WithContext(ctx).Preload("Address").First(&user, id).Error; err != nil {
 		slg.Logger.Error("find user by id", "error", err)
 		switch {
 		case errors.Is(err, gorm.ErrRecordNotFound):
