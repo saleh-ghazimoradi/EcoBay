@@ -22,7 +22,7 @@ type transactionRepository struct {
 }
 
 func (t *transactionRepository) CreatePayment(ctx context.Context, payment *domain.Payment) error {
-	return t.dbWrite.Create(payment).Error
+	return t.dbWrite.WithContext(ctx).Create(payment).Error
 }
 
 func (t *transactionRepository) FindInitialPayment(ctx context.Context, uId uint) (*domain.Payment, error) {

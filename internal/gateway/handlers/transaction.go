@@ -22,7 +22,6 @@ type TransactionHandler struct {
 
 func (t *TransactionHandler) MakePayment(ctx *fiber.Ctx) error {
 	user := t.authentication.GetCurrentUser(ctx)
-
 	pubKey := config.AppConfig.Stripe.PublishableKey
 
 	activePayment, err := t.transactionService.GetActivePayment(context.Background(), user.ID)
@@ -30,11 +29,15 @@ func (t *TransactionHandler) MakePayment(ctx *fiber.Ctx) error {
 		return serverErrorResponse(ctx, err)
 	}
 
-	if activePayment.ID > 0 {
+	if activePayment != nil {
 		return successResponse(ctx, fiber.StatusOK, "payment successfully created", pubKey)
 	}
 
+	// No active payment exists, create a new one
 	_, amount, err := t.userService.FindCart(context.Background(), user.ID)
+	if err != nil {
+		return serverErrorResponse(ctx, err)
+	}
 
 	orderId, err := helper.RandomNumbers(8)
 	if err != nil {
@@ -62,6 +65,49 @@ func (t *TransactionHandler) MakePayment(ctx *fiber.Ctx) error {
 		"secret":  paymentResult.ClientSecret,
 	})
 }
+
+//func (t *TransactionHandler) MakePayment(ctx *fiber.Ctx) error {
+//	user := t.authentication.GetCurrentUser(ctx)
+//
+//	pubKey := config.AppConfig.Stripe.PublishableKey
+//
+//	activePayment, err := t.transactionService.GetActivePayment(context.Background(), user.ID)
+//	if err != nil {
+//		return serverErrorResponse(ctx, err)
+//	}
+//
+//	if activePayment.ID > 0 {
+//		return successResponse(ctx, fiber.StatusOK, "payment successfully created", pubKey)
+//	}
+//
+//	_, amount, err := t.userService.FindCart(context.Background(), user.ID)
+//
+//	orderId, err := helper.RandomNumbers(8)
+//	if err != nil {
+//		return serverErrorResponse(ctx, errors.New("error generating order id"))
+//	}
+//
+//	paymentResult, err := t.paymentClient.CreatePayment(amount, user.ID, orderId)
+//	if err != nil {
+//		return badRequestResponse(ctx, err)
+//	}
+//
+//	if err = t.transactionService.StoreCreatedPayment(context.Background(), &dto.CreatePayment{
+//		UserId:       user.ID,
+//		Amount:       amount,
+//		ClientSecret: paymentResult.ClientSecret,
+//		PaymentId:    paymentResult.ID,
+//		OrderId:      orderId,
+//	}); err != nil {
+//		return badRequestResponse(ctx, err)
+//	}
+//
+//	return ctx.Status(http.StatusOK).JSON(&fiber.Map{
+//		"message": "create payment",
+//		"pubKey":  pubKey,
+//		"secret":  paymentResult.ClientSecret,
+//	})
+//}
 
 func (t *TransactionHandler) VerifyPayment(ctx *fiber.Ctx) error {
 	user := t.authentication.GetCurrentUser(ctx)

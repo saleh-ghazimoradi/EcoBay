@@ -2,10 +2,12 @@ package service
 
 import (
 	"context"
+	"errors"
 	"github.com/saleh-ghazimoradi/EcoBay/internal/domain"
 	"github.com/saleh-ghazimoradi/EcoBay/internal/dto"
 	"github.com/saleh-ghazimoradi/EcoBay/internal/helper"
 	"github.com/saleh-ghazimoradi/EcoBay/internal/repository"
+	"gorm.io/gorm"
 )
 
 type TransactionService interface {
@@ -38,7 +40,11 @@ func (t *transactionService) GetOrderDetails(ctx context.Context, user *domain.U
 }
 
 func (t *transactionService) GetActivePayment(ctx context.Context, uId uint) (*domain.Payment, error) {
-	return t.transactionRepository.FindInitialPayment(ctx, uId)
+	payment, err := t.transactionRepository.FindInitialPayment(ctx, uId)
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, nil
+	}
+	return payment, err
 }
 
 func (t *transactionService) StoreCreatedPayment(ctx context.Context, input *dto.CreatePayment) error {
