@@ -176,23 +176,12 @@ func (u *UserHandler) AddToCart(ctx *fiber.Ctx) error {
 func (u *UserHandler) GetCart(ctx *fiber.Ctx) error {
 	user := u.authentication.GetCurrentUser(ctx)
 
-	cart, err := u.userService.FindCart(ctx.Context(), user.ID)
+	cart, _, err := u.userService.FindCart(ctx.Context(), user.ID)
 	if err != nil {
 		return notFoundResponse(ctx)
 	}
 
 	return successResponse(ctx, fiber.StatusOK, "cart successfully retrieved", cart)
-}
-
-func (u *UserHandler) CreateOrders(ctx *fiber.Ctx) error {
-	user := u.authentication.GetCurrentUser(ctx)
-
-	orderRef, err := u.userService.CreateOrder(ctx.Context(), user)
-	if err != nil {
-		return serverErrorResponse(ctx, err)
-	}
-
-	return successResponse(ctx, fiber.StatusCreated, "orders successfully created", orderRef)
 }
 
 func (u *UserHandler) GetOrders(ctx *fiber.Ctx) error {

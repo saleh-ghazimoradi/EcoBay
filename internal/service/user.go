@@ -23,8 +23,8 @@ type UserService interface {
 	VerifyCode(ctx context.Context, id uint, code string) error
 	BecomeSeller(ctx context.Context, id uint, input *dto.BecomeSellerInput) (string, error)
 	CreateCart(ctx context.Context, input *dto.Cart, user *domain.User) ([]*domain.Cart, error)
-	FindCart(ctx context.Context, id uint) ([]*domain.Cart, error)
-	CreateOrder(ctx context.Context, user *domain.User) (string, error)
+	FindCart(ctx context.Context, id uint) ([]*domain.Cart, float64, error)
+	CreateOrder(ctx context.Context, uId uint, orderRef string, pId string, amount float64) error
 	CreateProfile(ctx context.Context, id uint, input *dto.Profile) error
 	GetOrderById(ctx context.Context, id, uId uint) (*domain.Order, error)
 	GetOrders(ctx context.Context, user *domain.User) ([]*domain.Order, error)
@@ -262,65 +262,60 @@ func (u *userService) CreateCart(ctx context.Context, input *dto.Cart, user *dom
 	return cartItems, nil
 }
 
-func (u *userService) FindCart(ctx context.Context, id uint) ([]*domain.Cart, error) {
+func (u *userService) FindCart(ctx context.Context, id uint) ([]*domain.Cart, float64, error) {
 	cartItems, err := u.userRepository.FindCartItems(ctx, id)
 	if err != nil {
 		slg.Logger.Error("error on finding cart items", "err", err)
-		return nil, err
+		return nil, 0, errors.New("error on finding cart items")
 	}
 
-	return cartItems, nil
+	var totalAmount float64
+	for _, item := range cartItems {
+		totalAmount += item.Price * float64(item.Qty)
+	}
+
+	return cartItems, totalAmount, nil
 }
 
-func (u *userService) CreateOrder(ctx context.Context, user *domain.User) (string, error) {
-	cartItems, err := u.userRepository.FindCartItems(ctx, user.ID)
+func (u *userService) CreateOrder(ctx context.Context, uId uint, orderRef string, pId string, amount float64) error {
+	cartItems, _, err := u.FindCart(ctx, uId)
 	if err != nil {
-		return "", errors.New("error finding items")
+		return errors.New("error on finding cart items")
 	}
 
 	if len(cartItems) == 0 {
-		return "", errors.New("cart is empty; cannot create order")
+		return errors.New("cart is empty cannot create the order")
 	}
 
-	paymentId := "PAY12345"
-	txnId := "TXN12345"
-	orderRef, _ := helper.RandomNumbers(8)
-
-	var amount float64
 	var orderItems []domain.OrderItem
 
 	for _, item := range cartItems {
-		amount += item.Price * float64(item.Qty)
 		orderItems = append(orderItems, domain.OrderItem{
 			ProductId: item.ProductId,
 			Qty:       item.Qty,
 			Price:     item.Price,
 			Name:      item.Name,
 			ImageUrl:  item.ImageUrl,
-			SellerId:  item.UserId,
+			SellerId:  item.SellerId,
 		})
 	}
 
 	order := &domain.Order{
-		UserId:         user.ID,
-		PaymentId:      paymentId,
-		TransactionId:  txnId,
+		UserId:         uId,
+		PaymentId:      pId,
 		OrderRefNumber: orderRef,
 		Amount:         amount,
 		Items:          orderItems,
 	}
 
-	if err = u.userRepository.CreateOrder(ctx, order); err != nil {
-		return "", err
+	err = u.userRepository.CreateOrder(ctx, order)
+	if err != nil {
+		return err
 	}
 
-	if err = u.userRepository.DeleteCartItems(ctx, user.ID); err != nil {
-		slg.Logger.Error("error deleting cart items", "user_id", user.ID, "err", err)
-		return "", errors.New("error deleting cart items")
-	}
+	err = u.userRepository.DeleteCartItems(ctx, uId)
 
-	return orderRef, nil
-
+	return err
 }
 
 func (u *userService) CreateProfile(ctx context.Context, id uint, input *dto.Profile) error {
